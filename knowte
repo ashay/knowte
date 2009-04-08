@@ -1,0 +1,458 @@
+#!/usr/bin/ruby
+
+require 'date'
+
+EDITOR = "vi"
+HOME_DIR = "/home/asrane/.rdir"
+
+cliArguments = []
+cliArguments.replace(ARGV)
+ARGV.clear
+
+def checkSetup()
+	if !File::exists?(HOME_DIR.to_s)
+		Dir.chdir(File.dirname(HOME_DIR.to_s))
+		Dir.mkdir(File.basename(HOME_DIR.to_s))
+		Dir.chdir(File.basename(HOME_DIR.to_s))
+		Dir.mkdir(".archive")
+	end
+end
+
+def printUsage ()
+	commands = [ "\033[10;34mnew\033[0m [tags]", "\033[10;34medit\033[0m date / tags", "\033[10;34medit\033[0m \033[10;34mrecent\033[0m", "\033[10;34marchive\033[0m date / tags", "\033[10;34marchive\033[0m \033[10;34mrecent\033[0m", "\033[10;34mtag\033[0m [file/\033[10;34mrecent\033[0m [\033[10;34m+\033[0m/\033[10;34m-\033[0m tags]]", "\033[10;34mlist\033[0m [date / tags]", "\033[10;34mprint\033[0m date / tags", "\033[10;34mprint\033[0m \033[10;34mrecent\033[0m", "\033[10;34mmerge\033[0m date / tags" ]
+	printSpecial("USAGE: \n")
+
+	for i in 0..commands.length-1 do
+		printSpecial(File.basename($0) + " ", "bold")
+		printSpecial(commands[i] + "\n")
+	end
+end
+
+def printSpecial (text, formatting="")
+	case formatting
+		when "bold":
+			printf "\033[1m%s\033[0m", text
+		when "red"
+			printf "\033[31m%s\033[0m", text
+		else
+			printf text
+	end
+end
+
+def printErr (text)
+	printSpecial(text, "red")
+end
+
+def flattenParams(params, userInput=true)
+	tags = ""
+	if params.length == 0
+		if userInput == true
+			printf "Tags: "
+			tags = gets
+		end
+	else
+		tags = params.join(' ');
+	end
+
+	return tags;
+end
+
+def formatFilename(filename, color=true)
+	fields = filename.split('*')
+	dateString = fields[0]
+	tagString = fields[1]
+	formattedString = dateString + "\t" + tagString.gsub('-', ' ')
+
+	if color == true
+		return "\033[32m" + formattedString + "\033[0m"
+	else
+		return formattedString;
+	end
+end
+
+def editFile(filename)
+	if system(EDITOR + " " + filename) == false
+		printErr "Could not open editor: " + EDITOR.to_s + "\n"
+		return 1
+	end
+
+	return 0
+end
+
+def new(params=[])
+	tags = flattenParams(params)
+	date = DateTime.now
+	filename = HOME_DIR.to_s + "/" + date.year.to_s + ":" + date.month.to_s + ":" + date.day.to_s + "*" + tags.gsub(' ', '-')
+	if editFile(filename) == 0
+		puts "Registered new note"
+	end
+end
+
+def getRecentFile()
+	fileList = []
+	# Search for the recently modified file
+	Dir.foreach(HOME_DIR) do |entry|
+		if entry != "." && entry != ".." && entry != ".archive"
+			mTime = File::mtime(HOME_DIR.to_s + "/" + entry)
+			fileList.push(mTime.strftime("%Y-%m-%d-%H-%M-%S") + "." + entry)
+		end
+	end
+
+	fileList.sort!	# Sort itself
+	return fileList.last.split('.')[1]
+end
+
+def edit(params=[])
+	searchTagString = flattenParams(params)
+	searchTags = searchTagString.split(' ')
+	
+	if searchTags[0] == "recent"
+		filename = getRecentFile()
+		if filename != ""
+			printf "Edit %s? (Y/n) ", formatFilename(filename)
+			userInput = gets.chomp
+			if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
+				editFile(HOME_DIR.to_s + "/" + filename)
+				puts "Note edited"
+			end
+		else
+			printErr "Could not find any recently edited note\n"
+		end
+
+		return
+	end
+
+	count = 0
+	userInput = ""
+	Dir.foreach(HOME_DIR) do |entry|
+		if entry != "." && entry != ".." && entry != ".archive"
+			fields = entry.split('*')
+			dateString = fields[0]
+			tagString = fields[1]
+			tags = tagString.split('-')
+			tags.push dateString
+
+			if (searchTags.length != 0 && (searchTags & tags == searchTags)) || searchTags.length == 0
+				printf "Edit %s? (Y/n) ", formatFilename(entry)
+				userInput = gets.chomp
+				if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
+					editFile(HOME_DIR.to_s + "/" + entry)
+					count = count+1
+				end
+			end
+		end
+	end
+
+	puts "Total " + count.to_s + " note(s) edited"
+end
+
+def archive(params=[])
+	searchTagString = flattenParams(params)
+	searchTags = searchTagString.split(' ')
+	
+	if searchTags[0] == "recent"
+		filename = getRecentFile()
+		if filename != ""
+			printf "Move %s? (Y/n) ", formatFilename(filename)
+			userInput = gets.chomp
+			if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
+				File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/.archive/" + filename)
+				puts "Note archived"
+			else
+				puts "Archive aborted"
+			end
+		else
+			printErr "Could not find any recently edited note\n"
+		end
+		return
+	end
+
+	count = 0
+	userInput = ""
+	Dir.foreach(HOME_DIR) do |entry|
+		if entry != "." && entry != ".." && entry != ".archive"
+			fields = entry.split('*')
+			dateString = fields[0]
+			tagString = fields[1]
+			tags = tagString.split('-')
+			tags.push dateString
+
+			if (searchTags.length != 0 && (searchTags & tags == searchTags)) || searchTags.length == 0
+				printf "Move %s? (Y/n) ", formatFilename(entry)
+				userInput = gets.chomp
+				if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
+					File.rename(HOME_DIR.to_s + "/" + entry, HOME_DIR.to_s + "/.archive/" + entry)
+					count = count+1
+				end
+			end
+		end
+	end
+
+	puts "Total " + count.to_s + " note(s) archived"
+end
+
+def tagSingleNote(filename, searchTags)
+	fields = filename.split('*')
+	dateString = fields[0]
+	tagString = fields[1]
+	tags = tagString.split('-')
+
+	if searchTags.empty?
+		printf "Add(+) / Remove(-) tags (default: +)? "
+		operation = gets.chomp
+		if operation.empty?
+			operation = "+"
+		end
+	else
+		operation = searchTags.shift
+	end
+
+	if searchTags.empty?
+		printf "Tags to be added or removed: "
+		searchTags = gets.chomp.split(' ')
+		if searchTags.empty?
+			return false
+		end
+	end
+
+	if operation == "+"
+		# Add tag
+		tags = tags | searchTags
+		printf "Add tag(s) \033[10;32m" + searchTags.join(', ') + "\033[0m for %s? (Y/n) ", formatFilename(filename)
+	else
+		if operation == "-"
+			# Remove tag
+			tags = tags - searchTags
+			printf "Remove tag(s) \033[10;32m" + searchTags.join(', ') + "\033[0m for %s? (Y/n) ", formatFilename(filename)
+		else
+			printErr "Invalid command, expecting '+' or '-' after 'recent'\n"
+			return false
+		end
+	end
+
+	userInput = gets.chomp
+	if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
+		File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/" + dateString + "*" + tags.join('-'))
+		return true
+	else
+		return false
+	end
+end
+
+def tag(params=[])
+	searchTagString = flattenParams(params, false)
+	searchTags = searchTagString.split(' ')
+	
+	if searchTags[0] == "recent"
+		filename = getRecentFile()
+		if filename != ""
+			if tagSingleFile(filename, searchTags) == true
+				puts "Tags changed"
+			else
+				puts "Aborted changing tags"
+			end
+		else
+			printErr "Could not find any recently edited note\n"
+		end
+
+		return
+	end
+
+	count = 0
+	userInput = ""
+
+	noteMatchTags=[]
+	if searchTags.empty?
+		printf "Tags to identify source note: "
+		searchTags = gets.chomp.split(' ')
+	end
+
+	for i in 0..searchTags.length-1
+		if searchTags[0] != "+" && searchTags[0] != "-"
+			noteMatchTags.push searchTags.shift
+		else
+			break
+		end
+	end
+
+	# if noteMatchTags.length == searchTags.length
+	#	printErr "Incorrect syntax, expecting a +/- and at least one tag\n"
+	#	return
+	# end
+
+	Dir.foreach(HOME_DIR) do |entry|
+		if entry != "." && entry != ".." && entry != ".archive"
+			fields = entry.split('*')
+			dateString = fields[0]
+			tagString = fields[1]
+			tags = tagString.split('-')
+			tags.push dateString
+
+			if (noteMatchTags.length != 0 && (noteMatchTags & tags == noteMatchTags)) || noteMatchTags.length == 0
+				if tagSingleNote(entry, searchTags) == true
+					count = count+1
+				end
+			end
+		end
+	end
+
+	puts "Changed tags for " + count.to_s + " note(s)"
+end
+
+def list(params=[])
+	searchTagString = flattenParams(params)
+	searchTags = searchTagString.split(' ')
+
+	count = 0
+	Dir.foreach(HOME_DIR) do |entry|
+		if entry != "." && entry != ".." && entry != ".archive"
+			fields = entry.split('*')
+			dateString = fields[0]
+			tagString = fields[1]
+			tags = tagString.split('-')
+			tags.push dateString
+
+			if (searchTags.length != 0 && (searchTags & tags == searchTags)) || searchTags.length == 0
+				puts formatFilename(entry)
+			end
+		end
+	end
+end
+
+def readFile(filename)
+	fileContents = ""
+	file = File.new(filename, "r")
+	while (line = file.gets)
+	#	fileContents = fileContents + line
+		fileContents += line
+	end
+
+	file.close
+	return fileContents
+end
+
+def writeFile(filename, fileContents="")
+	newFile = File.open(filename, File::WRONLY|File::TRUNC|File::CREAT)
+	newFile.puts fileContents
+	newFile.close
+end
+
+def print(params=[])
+	searchTagString = flattenParams(params)
+	searchTags = searchTagString.split(' ')
+
+	if searchTags[0] == "recent"
+		filename = getRecentFile()
+		if filename != ""
+			puts formatFilename(filename)
+			puts readFile(HOME_DIR.to_s + "/" + filename)
+			puts
+		else
+			printErr "Could not find any recently edited note\n"
+		end
+
+		return
+	end
+
+	count = 0
+	Dir.foreach(HOME_DIR) do |entry|
+		if entry != "." && entry != ".." && entry != ".archive"
+			fields = entry.split('*')
+			dateString = fields[0]
+			tagString = fields[1]
+			tags = tagString.split('-')
+			tags.push dateString
+
+			if (searchTags.length != 0 && (searchTags & tags == searchTags)) || searchTags.length == 0
+				puts formatFilename(entry)
+				puts readFile(HOME_DIR.to_s + "/" + entry)
+				puts
+				count = count+1
+			end
+		end
+	end
+
+	puts "Total " + count.to_s + " notes(s)"
+end
+
+def merge(params=[])
+	searchTagString = flattenParams(params)
+	searchTags = searchTagString.split(' ')
+
+	count = 0
+	fileList = []
+	origTags = []
+	newTags = []
+	Dir.foreach(HOME_DIR) do |entry|
+		if entry != "." && entry != ".." && entry != ".archive"
+			fields = entry.split('*')
+			dateString = fields[0]
+			tagString = fields[1]
+			tags = tagString.split('-')
+			origTags.replace(tags)
+			tags.push dateString
+
+			if (searchTags.length != 0 && (searchTags & tags == searchTags)) || searchTags.length == 0
+				newTags = newTags | origTags
+				fileList.push entry
+				count = count+1
+			end
+		end
+	end
+
+	if count > 1
+		puts "Will merge the following notes: "
+		for i in 0..fileList.length-1 do
+			puts formatFilename(fileList[i])
+		end
+		printf "\nProceed? (Y/n) "
+		userInput = gets.chomp
+		if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
+			# Merge them
+			finalString = ""
+			for i in 0..fileList.length-1 do
+				finalString += formatFilename(fileList[i], false) + ":\n" + readFile(HOME_DIR.to_s + "/" + fileList[i]) + "\n"
+			end
+
+			date = DateTime.now
+			filename = HOME_DIR.to_s + "/" + date.year.to_s + ":" + date.month.to_s + ":" + date.day.to_s + "*" + newTags.join('-')
+			writeFile(filename, finalString.chomp)
+
+			# Open EDITOR
+			if editFile(filename) == 0
+				# Delete old files
+				for i in 0..fileList.length-1 do
+					if fileList[i] != filename
+						File.rename(HOME_DIR.to_s + "/" + fileList[i], HOME_DIR.to_s + "/.archive/" + fileList[i])
+					end
+				end
+			end
+			
+			puts "Merged notes"
+		else
+			puts "Aborted merging notes"
+		end
+	else
+		if count == 1
+			puts "Only one note matched your search criteria: " + formatFilename(fileList[0])
+		else
+			puts "No notes merged your search criteria"
+		end
+	end
+end
+
+checkSetup()
+
+if cliArguments.length == 0
+	printUsage()
+end
+
+case cliArguments.shift
+	when "new":	new(cliArguments)
+	when "edit":	edit(cliArguments)
+	when "archive":	archive(cliArguments)
+	when "tag":	tag(cliArguments)
+	when "list":	list(cliArguments)
+	when "print":	print(cliArguments)
+	when "merge":	merge(cliArguments)
+end
