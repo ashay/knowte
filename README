@@ -1,3 +1,69 @@
 KNOWTE 0.1
 
-Knowte is a tool to record notes. The main objective of the tool is to have an extremely light-weight, low overhead way to compile a constantly volatile research diary. The tool aims to create notes that are searchable and taggable.
+Knowte is a tool to record notes. The main objective of the tool is to have an extremely light-weight, low overhead way to compile a constantly volatile research diary. The tool aims to create notes that are searchable and taggable. I didn't want to use any complex management software for this, like the ones available outside. Moreover, if you work in a setting like me, you would agree that the console is everything that is there to the world! :) If you use GUI for just staring up the shutting down the computer, you would probably find this tool quite handy.
+
+1. INSTALLATION:
+Knowte just needs a working Ruby installation. My system is running Ruby 1.8.7 and Knowte (of course) works perfectly fine with this. You can check the version of Ruby installed on your computer by saying:
+$ ruby -v
+at the terminal. But from your love for the console, I think you can figure this part out by yourself. :P
+
+Once you have Ruby running, there are just two steps to installing Knowte.
+a. Place the executable into a folder thats in your PATH variable.
+b. If your Ruby interpreter does not reside in /usr/bin/ruby, put the appropriate path in the first line of the Knowte executable.
+
+2. USE:
+I know you wouldn't be reading this manual before you use. So I did not include the obvious things that you can figure out by running Knowte by yourself. ;)
+
+You can get a full list, along with the syntax by just typing `knowte':
+USAGE: 
+[1mknowte [0m[10;34mnew[0m [tags]
+[1mknowte [0m[10;34medit[0m date / tags
+[1mknowte [0m[10;34medit[0m [10;34mrecent[0m
+[1mknowte [0m[10;34marchive[0m date / tags
+[1mknowte [0m[10;34marchive[0m [10;34mrecent[0m
+[1mknowte [0m[10;34mrecover[0m date / tags
+[1mknowte [0m[10;34mtag[0m [file/[10;34mrecent[0m [[10;34m+[0m/[10;34m-[0m tags]]
+[1mknowte [0m[10;34mlist[0m [date / tags]
+[1mknowte [0m[10;34mprint[0m date / tags
+[1mknowte [0m[10;34mprint[0m [10;34mrecent[0m
+[1mknowte [0m[10;34mmerge[0m date / tags
+
+Commands are shown in blue. The rest of the text indicates the options that you might want to pass to Knowte. Fret not, you need not remember the syntax. You could just type the command and Knowte will prompt you for the required parameters.
+
+Notes are identified by their date of creation and their associated tags. The date and tag parameteres to different commands are used for searching existing notes. Knowte does a partial search, so that you can find notes that were created in a particular month (instead of typing in the full date), etc. When displayed, notes are ordered according to their modification time, so that the most recently modified note appears at the beginning.
+
+While searching, Knowte uses ORing between your search tags. As of now, I don't have any means to explicitly specify AND, OR, NOT or their combination. And okay, please don't ask for EXOR or other such weird thing. ;)
+
+One thing to note (knowte?) is that you can use the key word `recent' with most commands. This lets you avoid spending energy that would have lost typing the entire keyword(s) or date.'Recent' notes mean notes that were modified recently and modification means editing the content or re-tagging.
+
+2.1 new
+Creates a new note. Prompts for the tags that you want the note to be associated with. Then opens an editor (by default, vi; if you want any other editor change the EDITOR variable in the executable). Tags, instead of title, are enforced because tagging is the central feature of Knowte (and as my friend Tony reminded me) it makes the note-taking more disciplined.
+
+2.2 edit
+Searches as per the keywords or selects the most recently modified note and fires up the editor. This only changes the content. If you want to change tags, use the `tag' command.
+
+2.3 archive
+Works just like deleting (makes the file vanish!) but instead just moves the note to an unknown(!) location. Being the kind of nerd that you are, I bet you can find out where it goes. Anyway, you can recover it by using the `recover' command. For now, archiving does not save any disk space.
+
+2.4 recover
+Recovers notes from the archive.
+
+2.5 tag
+You can change tags using this command. You can specify the note using the date or any of the tags (or a portion of the date/tag or the key word recent), a plus/minus sign indicating whether you want to add or remove tags and the the actual tags to be added or removed. Don't worry, it will ask for a confirmation before it modifies anything.
+
+2.6 list
+Shows notes according to your criteria.
+
+2.7 print
+Shows the contents of the note(s) along with the date and tags.
+
+2.8 merge
+Ah! This is important so I'll talk a little more about it. When using some other tools I noticed that I often created these small notes and then ended up with so many of them that I didn't know what to do. So there's this merge feature that you can use to... merge notes. Your search critera will be used to match notes and you will be asked to select which ones among them do you want to merge.
+
+3. HOW TO CONTRIBUTE
+You can help me with whatever you can. For now, I'm not accepting donations but you could consider writing my Thesis document for me. If that seems like too big a task, you can help me with using Knowte, letting me know of bugs, suggesting (or demanding) new features or actually churning out code to improve Knowte! For now, I already have a few suggestions from people, like:
+  - Adding support for attaching files (like graphs, data, etc.)
+  - Versioning the notes (but would that defeat the purpose of keeping Knowte low-overhead?)
+
+4. LICENSING
+Knowte and its source code is licensed under GNU GPL 3. Thats more than enough to say.
