@@ -20,8 +20,8 @@
 require 'date'
 require 'fileutils'
 
-EDITOR = "vi"
-HOME_DIR = "/home/asrane/.rdir"
+EDITOR = ENV['EDITOR']
+HOME_DIR = ENV['HOME'] +"/.rdir"
 INTER_TAG_DELIM = ','
 INTRA_TAG_DELIM = '-'
 
