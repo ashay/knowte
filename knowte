@@ -21,6 +21,8 @@ require 'date'
 
 EDITOR = "vi"
 HOME_DIR = "/home/asrane/.rdir"
+INTER_TAG_DELIM = ','
+INTRA_TAG_DELIM = '-'
 
 cliArguments = []
 cliArguments.replace(ARGV)
@@ -60,25 +62,69 @@ def printErr (text)
 	printSpecial(text, "red")
 end
 
+def findMatch(tags, searchTags=[])
+	if searchTags.length == 0
+		return true
+	end
+
+	for i in 0..searchTags.length-1
+		for j in 0..tags.length-1
+			if tags[j].include?(searchTags[i])
+				return true
+			end
+		end
+	end
+
+	return false
+end
+
+def splitQuottedStrings(inputString="")
+	finalTags = []
+	userInput = inputString.chomp.strip.gsub('"', '\'')
+	splits = userInput.split('\'')
+	for i in 0..splits.length-1
+		if i % 2 == 1
+			# Odd: Quotted strings
+			if splits[i].chomp.strip.empty? == false
+				finalTags.push(splits[i].chomp.strip.gsub(' ', INTRA_TAG_DELIM.to_s))
+			end
+		else
+			# Even: Non-quotted strings
+			if splits [i].empty? == false
+				nestedSplits = splits [i].chomp.strip.split(' ')
+				for j in 0..nestedSplits.length-1
+					if nestedSplits[j].chomp.strip.empty? == false
+						finalTags.push nestedSplits[j].chomp.strip
+					end
+				end
+			end
+		end
+	end
+
+	return finalTags
+end
+
 def flattenParams(params, userInput=true)
-	tags = ""
+	tags = []
 	if params.length == 0
 		if userInput == true
 			printf "Tags: "
-			tags = gets
+			return splitQuottedStrings(gets())
 		end
 	else
-		tags = params.join(' ');
+		for i in 0..params.length-1
+			tags[i] = params[i].gsub(' ', INTRA_TAG_DELIM.to_s)
+		end
 	end
 
-	return tags;
+	return tags
 end
 
 def formatFilename(filename, color=true)
 	fields = filename.split('*')
 	dateString = fields[0]
-	tagString = fields[1]
-	formattedString = dateString + "\t" + tagString.gsub('-', ' ')
+	tagString = fields[1].gsub(INTER_TAG_DELIM.to_s, ', ')
+	formattedString = dateString + "\t" + tagString.gsub(INTRA_TAG_DELIM.to_s, '-')
 
 	if color == true
 		return "\033[32m" + formattedString + "\033[0m"
@@ -97,9 +143,10 @@ def editFile(filename)
 end
 
 def new(params=[])
-	tags = flattenParams(params)
+	tagArray = flattenParams(params)
+	tags = tagArray.join(INTER_TAG_DELIM.to_s)
 	date = DateTime.now
-	filename = HOME_DIR.to_s + "/" + date.year.to_s + ":" + date.month.to_s + ":" + date.day.to_s + "*" + tags.gsub(' ', '-')
+	filename = HOME_DIR.to_s + "/" + date.year.to_s + ":" + date.month.to_s + ":" + date.day.to_s + "*" + tags
 	if editFile(filename) == 0
 		puts "Registered new note"
 	end
@@ -120,9 +167,8 @@ def getRecentFile()
 end
 
 def edit(params=[])
-	searchTagString = flattenParams(params)
-	searchTags = searchTagString.split(' ')
-	
+	searchTags = flattenParams(params)
+
 	if searchTags[0] == "recent"
 		filename = getRecentFile()
 		if filename != ""
@@ -146,10 +192,10 @@ def edit(params=[])
 			fields = entry.split('*')
 			dateString = fields[0]
 			tagString = fields[1]
-			tags = tagString.split('-')
+			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
-			if (searchTags.length != 0 && (searchTags & tags == searchTags)) || searchTags.length == 0
+			if (findMatch(tags, searchTags))
 				printf "Edit %s? (Y/n) ", formatFilename(entry)
 				userInput = gets.chomp
 				if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
@@ -164,9 +210,8 @@ def edit(params=[])
 end
 
 def archive(params=[])
-	searchTagString = flattenParams(params)
-	searchTags = searchTagString.split(' ')
-	
+	searchTags = flattenParams(params)
+
 	if searchTags[0] == "recent"
 		filename = getRecentFile()
 		if filename != ""
@@ -191,10 +236,10 @@ def archive(params=[])
 			fields = entry.split('*')
 			dateString = fields[0]
 			tagString = fields[1]
-			tags = tagString.split('-')
+			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
-			if (searchTags.length != 0 && (searchTags & tags == searchTags)) || searchTags.length == 0
+			if (findMatch(tags, searchTags))
 				printf "Move %s? (Y/n) ", formatFilename(entry)
 				userInput = gets.chomp
 				if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
@@ -212,7 +257,7 @@ def tagSingleNote(filename, searchTags)
 	fields = filename.split('*')
 	dateString = fields[0]
 	tagString = fields[1]
-	tags = tagString.split('-')
+	tags = tagString.split(INTER_TAG_DELIM.to_s)
 
 	if searchTags.empty?
 		printf "Add(+) / Remove(-) tags (default: +)? "
@@ -226,7 +271,7 @@ def tagSingleNote(filename, searchTags)
 
 	if searchTags.empty?
 		printf "Tags to be added or removed: "
-		searchTags = gets.chomp.split(' ')
+		searchTags = splitQuottedStrings(gets.chomp.strip)
 		if searchTags.empty?
 			return false
 		end
@@ -249,7 +294,7 @@ def tagSingleNote(filename, searchTags)
 
 	userInput = gets.chomp
 	if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-		File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/" + dateString + "*" + tags.join('-'))
+		File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/" + dateString + "*" + tags.join(INTER_TAG_DELIM.to_s))
 		return true
 	else
 		return false
@@ -257,8 +302,7 @@ def tagSingleNote(filename, searchTags)
 end
 
 def tag(params=[])
-	searchTagString = flattenParams(params, false)
-	searchTags = searchTagString.split(' ')
+	searchTags = flattenParams(params, false)
 	
 	if searchTags[0] == "recent"
 		filename = getRecentFile()
@@ -281,7 +325,7 @@ def tag(params=[])
 	noteMatchTags=[]
 	if searchTags.empty?
 		printf "Tags to identify source note: "
-		searchTags = gets.chomp.split(' ')
+		searchTags = splitQuottedStrings(gets.strip.chomp)
 	end
 
 	for i in 0..searchTags.length-1
@@ -302,10 +346,10 @@ def tag(params=[])
 			fields = entry.split('*')
 			dateString = fields[0]
 			tagString = fields[1]
-			tags = tagString.split('-')
+			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
-			if (noteMatchTags.length != 0 && (noteMatchTags & tags == noteMatchTags)) || noteMatchTags.length == 0
+			if (findMatch(tags, noteMatchTags))
 				if tagSingleNote(entry, searchTags) == true
 					count = count+1
 				end
@@ -317,8 +361,7 @@ def tag(params=[])
 end
 
 def list(params=[])
-	searchTagString = flattenParams(params)
-	searchTags = searchTagString.split(' ')
+	searchTags = flattenParams(params)
 
 	count = 0
 	Dir.foreach(HOME_DIR) do |entry|
@@ -326,14 +369,17 @@ def list(params=[])
 			fields = entry.split('*')
 			dateString = fields[0]
 			tagString = fields[1]
-			tags = tagString.split('-')
+			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
-			if (searchTags.length != 0 && (searchTags & tags == searchTags)) || searchTags.length == 0
+			if (findMatch(tags, searchTags))
 				puts formatFilename(entry)
+				count = count+1
 			end
 		end
 	end
+
+	puts "Total " + count.to_s + " note(s) displayed"
 end
 
 def readFile(filename)
@@ -355,8 +401,7 @@ def writeFile(filename, fileContents="")
 end
 
 def print(params=[])
-	searchTagString = flattenParams(params)
-	searchTags = searchTagString.split(' ')
+	searchTags = flattenParams(params)
 
 	if searchTags[0] == "recent"
 		filename = getRecentFile()
@@ -377,10 +422,10 @@ def print(params=[])
 			fields = entry.split('*')
 			dateString = fields[0]
 			tagString = fields[1]
-			tags = tagString.split('-')
+			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
-			if (searchTags.length != 0 && (searchTags & tags == searchTags)) || searchTags.length == 0
+			if (findMatch(tags, searchTags))
 				puts formatFilename(entry)
 				puts readFile(HOME_DIR.to_s + "/" + entry)
 				puts
@@ -393,8 +438,7 @@ def print(params=[])
 end
 
 def merge(params=[])
-	searchTagString = flattenParams(params)
-	searchTags = searchTagString.split(' ')
+	searchTags = flattenParams(params)
 
 	count = 0
 	fileList = []
@@ -405,55 +449,60 @@ def merge(params=[])
 			fields = entry.split('*')
 			dateString = fields[0]
 			tagString = fields[1]
-			tags = tagString.split('-')
+			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			origTags.replace(tags)
 			tags.push dateString
 
-			if (searchTags.length != 0 && (searchTags & tags == searchTags)) || searchTags.length == 0
-				newTags = newTags | origTags
-				fileList.push entry
-				count = count+1
+			if (findMatch(tags, searchTags))
+				printf "Use " + formatFilename(entry) + " for merging? (Y/n) "
+				userInput = gets.chomp.strip
+				if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
+					newTags = newTags | origTags
+					fileList.push entry
+					count = count+1
+				end
 			end
 		end
 	end
 
 	if count > 1
-		puts "Will merge the following notes: "
+		puts "\nMerging following notes: "
 		for i in 0..fileList.length-1 do
 			puts formatFilename(fileList[i])
 		end
-		printf "\nProceed? (Y/n) "
-		userInput = gets.chomp
-		if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-			# Merge them
-			finalString = ""
+
+		# printf "\nProceed? (Y/n) "
+		# userInput = gets.chomp
+		# if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
+		# Merge them
+		finalString = ""
+		for i in 0..fileList.length-1 do
+			finalString += formatFilename(fileList[i], false) + ":\n" + readFile(HOME_DIR.to_s + "/" + fileList[i]) + "\n"
+		end
+
+		date = DateTime.now
+		filename = HOME_DIR.to_s + "/" + date.year.to_s + ":" + date.month.to_s + ":" + date.day.to_s + "*" + newTags.join(INTER_TAG_DELIM.to_s)
+		writeFile(filename, finalString.chomp)
+
+		# Open EDITOR
+		if editFile(filename) == 0
+			# Delete old files
 			for i in 0..fileList.length-1 do
-				finalString += formatFilename(fileList[i], false) + ":\n" + readFile(HOME_DIR.to_s + "/" + fileList[i]) + "\n"
-			end
-
-			date = DateTime.now
-			filename = HOME_DIR.to_s + "/" + date.year.to_s + ":" + date.month.to_s + ":" + date.day.to_s + "*" + newTags.join('-')
-			writeFile(filename, finalString.chomp)
-
-			# Open EDITOR
-			if editFile(filename) == 0
-				# Delete old files
-				for i in 0..fileList.length-1 do
-					if fileList[i] != filename
-						File.rename(HOME_DIR.to_s + "/" + fileList[i], HOME_DIR.to_s + "/.archive/" + fileList[i])
-					end
+				if fileList[i] != filename
+					File.rename(HOME_DIR.to_s + "/" + fileList[i], HOME_DIR.to_s + "/.archive/" + fileList[i])
 				end
 			end
-			
-			puts "Merged notes"
-		else
-			puts "Aborted merging notes"
 		end
+		
+		puts "Merged notes"
+		# else
+		# 	puts "Aborted merging notes"
+		# end
 	else
 		if count == 1
-			puts "Only one note matched your search criteria: " + formatFilename(fileList[0])
+			puts "Only one note matched your criteria: " + formatFilename(fileList[0])
 		else
-			puts "No notes merged your search criteria"
+			puts "No notes merged your criteria"
 		end
 	end
 end
@@ -473,4 +522,5 @@ case cliArguments.shift
 	when "list":	list(cliArguments)
 	when "print":	print(cliArguments)
 	when "merge":	merge(cliArguments)
+	when "test":	test(cliArguments)
 end
