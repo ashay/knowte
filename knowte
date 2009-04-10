@@ -20,7 +20,13 @@
 require 'date'
 require 'fileutils'
 
-EDITOR = ENV['EDITOR']
+$editor = ENV['EDITOR']
+DEFAULT_EDITOR = "vi"
+
+if $editor.to_s.empty?
+	$editor = DEFAULT_EDITOR.to_s
+end
+
 HOME_DIR = ENV['HOME'] +"/.rdir"
 INTER_TAG_DELIM = ','
 INTRA_TAG_DELIM = '-'
@@ -135,8 +141,9 @@ def formatFilename(filename, color=true)
 end
 
 def editFile(filename)
-	if system(EDITOR + " " + filename) == false
-		printErr "Could not open editor: " + EDITOR.to_s + "\n"
+	FileUtils.touch(filename)
+	if system($editor + " " + filename) == false
+		printErr "Could not open editor: " + $editor.to_s + "\n"
 		return 1
 	end
 
@@ -522,7 +529,7 @@ def merge(params=[])
 		filename = HOME_DIR.to_s + "/" + date.year.to_s + ":" + date.month.to_s + ":" + date.day.to_s + "*" + newTags.join(INTER_TAG_DELIM.to_s)
 		writeFile(filename, finalString.chomp)
 
-		# Open EDITOR
+		# Open $editor
 		if editFile(filename) == 0
 			# Delete old files
 			for i in 0..fileList.length-1 do
