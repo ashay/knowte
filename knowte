@@ -92,16 +92,18 @@ def splitQuottedStrings(inputString="")
 	for i in 0..splits.length-1
 		if i % 2 == 1
 			# Odd: Quotted strings
-			if splits[i].chomp.strip.empty? == false
-				finalTags.push(splits[i].chomp.strip.gsub(' ', INTRA_TAG_DELIM.to_s))
+			newValue = splits[i].gsub(/[ \/]/, INTRA_TAG_DELIM.to_s).chom.strip
+			if newValue.empty? == false
+				finalTags.push newValue
 			end
 		else
 			# Even: Non-quotted strings
 			if splits [i].empty? == false
 				nestedSplits = splits [i].chomp.strip.split(' ')
 				for j in 0..nestedSplits.length-1
-					if nestedSplits[j].chomp.strip.empty? == false
-						finalTags.push nestedSplits[j].chomp.strip
+					newValue = nestedSplits[j].gsub(/[ \/]/, INTRA_TAG_DELIM.to_s).chomp.strip
+					if newValue.empty? == false
+						finalTags.push newValue
 					end
 				end
 			end
@@ -120,7 +122,7 @@ def flattenParams(params, userInput=true)
 		end
 	else
 		for i in 0..params.length-1
-			tags[i] = params[i].gsub(' ', INTRA_TAG_DELIM.to_s)
+			tags[i] = params[i].gsub(/[ \/]/, INTRA_TAG_DELIM.to_s)
 		end
 	end
 
