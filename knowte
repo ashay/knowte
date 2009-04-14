@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/home/ashayrane/apps/bin/ruby
 
 # Knowte: A tool to record notes for compiling a research diary
 # Copyright (C) 2009  Ashay Rane
@@ -56,9 +56,9 @@ end
 
 def printSpecial (text, formatting="")
 	case formatting
-		when "bold":
+		when "bold" then
 			printf "\033[1m%s\033[0m", text
-		when "red"
+		when "red" then
 			printf "\033[31m%s\033[0m", text
 		else
 			printf text
@@ -560,12 +560,12 @@ if cliArguments.length == 0
 end
 
 case cliArguments.shift
-	when "new":	new(cliArguments)
-	when "edit":	edit(cliArguments)
-	when "archive":	archive(cliArguments)
-	when "tag":	tag(cliArguments)
-	when "list":	list(cliArguments)
-	when "print":	print(cliArguments)
-	when "merge":	merge(cliArguments)
-	when "recover":	recover(cliArguments)
+	when "new" then		new(cliArguments)
+	when "edit" then	edit(cliArguments)
+	when "archive" then	archive(cliArguments)
+	when "tag" then		tag(cliArguments)
+	when "list" then	list(cliArguments)
+	when "print" then	print(cliArguments)
+	when "merge" then	merge(cliArguments)
+	when "recover" then	recover(cliArguments)
 end
