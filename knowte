@@ -132,7 +132,7 @@ end
 def formatFilename(filename, color=true)
 	fields = filename.split('*')
 	dateString = fields[0]
-	tagString = fields[1].gsub(INTER_TAG_DELIM.to_s, ', ')
+	tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
 	formattedString = dateString + "\t" + tagString.gsub(INTRA_TAG_DELIM.to_s, '-')
 
 	if color == true
@@ -201,7 +201,7 @@ def edit(params=[])
 		if entry != "." && entry != ".." && entry != ".archive"
 			fields = entry.split('*')
 			dateString = fields[0]
-			tagString = fields[1]
+			tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
 			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
@@ -245,7 +245,7 @@ def archive(params=[])
 		if entry != "." && entry != ".." && entry != ".archive"
 			fields = entry.split('*')
 			dateString = fields[0]
-			tagString = fields[1]
+			tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
 			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
@@ -271,7 +271,7 @@ def recover(params=[])
 		if entry != "." && entry != ".."
 			fields = entry.split('*')
 			dateString = fields[0]
-			tagString = fields[1]
+			tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
 			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
@@ -293,7 +293,7 @@ end
 def tagSingleNote(filename, searchTags)
 	fields = filename.split('*')
 	dateString = fields[0]
-	tagString = fields[1]
+	tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
 	tags = tagString.split(INTER_TAG_DELIM.to_s)
 
 	if searchTags.empty?
@@ -382,7 +382,7 @@ def tag(params=[])
 		if entry != "." && entry != ".." && entry != ".archive"
 			fields = entry.split('*')
 			dateString = fields[0]
-			tagString = fields[1]
+			tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
 			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
@@ -406,7 +406,7 @@ def list(params=[])
 		if entry != "." && entry != ".." && entry != ".archive"
 			fields = entry.split('*')
 			dateString = fields[0]
-			tagString = fields[1]
+			tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
 			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
@@ -468,7 +468,7 @@ def print(params=[])
 		if entry != "." && entry != ".." && entry != ".archive"
 			fields = entry.split('*')
 			dateString = fields[0]
-			tagString = fields[1]
+			tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
 			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
@@ -495,7 +495,7 @@ def merge(params=[])
 		if entry != "." && entry != ".." && entry != ".archive"
 			fields = entry.split('*')
 			dateString = fields[0]
-			tagString = fields[1]
+			tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
 			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			origTags.replace(tags)
 			tags.push dateString
