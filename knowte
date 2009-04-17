@@ -173,7 +173,8 @@ def getRecentFile()
 	end
 
 	fileList.sort!	# Sort itself
-	return fileList.last.split('.')[1]
+	fields = fileList.last.split('.')
+	return fields [1..fields.length()-1].join('.')
 end
 
 def edit(params=[])
@@ -423,7 +424,7 @@ def list(params=[])
 	for i in 0..fileList.length-1
 		parts = fileList[fileList.length-1-i].split('.')
 		parts.shift
-		puts formatFilename(parts.join)
+		puts formatFilename(parts.join('.'))
 	end
 
 	puts "Total " + count.to_s + " note(s) displayed"
