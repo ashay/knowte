@@ -21,7 +21,7 @@ require 'date'
 require 'fileutils'
 
 $editor = ENV['EDITOR']
-DEFAULT_EDITOR = "vi"
+DEFAULT_EDITOR = "notepad"
 
 if $editor.to_s.empty?
 	$editor = DEFAULT_EDITOR.to_s
@@ -30,6 +30,18 @@ end
 HOME_DIR = ENV['HOME'] +"/.rdir"
 INTER_TAG_DELIM = ','
 INTRA_TAG_DELIM = '-'
+
+WINDOWS = false
+
+if WINDOWS
+	DATE_TAG_DELIM  = '$'
+	DATE_FIELD_DELIM= '%'
+	NOCOLOR = true
+else
+	DATE_TAG_DELIM  = '*'
+	DATE_FIELD_DELIM= '-'
+	NOCOLOR = false
+end
 
 cliArguments = []
 cliArguments.replace(ARGV)
@@ -44,24 +56,34 @@ def checkSetup()
 	end
 end
 
-def printUsage ()
-	commands = [ "\033[10;34mnew\033[0m [tags]", "\033[10;34medit\033[0m date / tags", "\033[10;34medit\033[0m \033[10;34mrecent\033[0m", "\033[10;34marchive\033[0m date / tags", "\033[10;34marchive\033[0m \033[10;34mrecent\033[0m", "\033[10;34mrecover\033[0m date / tags", "\033[10;34mtag\033[0m [file/\033[10;34mrecent\033[0m [\033[10;34m+\033[0m/\033[10;34m-\033[0m tags]]", "\033[10;34mlist\033[0m [date / tags]", "\033[10;34mprint\033[0m date / tags", "\033[10;34mprint\033[0m \033[10;34mrecent\033[0m", "\033[10;34mmerge\033[0m date / tags" ]
+def printUsage()
+	if NOCOLOR
+		commands = [ "new [tags]", "edit date / tags", "edit recent", "archive date / tags", "archive recent", "recover date / tags", "tag [file/recent [+/- tags]]", "list [date / tags]", "print date / tags", "print recent", "merge date / tags" ]
+	else
+		commands = [ "\033[10;34mnew\033[0m [tags]", "\033[10;34medit\033[0m date / tags", "\033[10;34medit\033[0m \033[10;34mrecent\033[0m", "\033[10;34marchive\033[0m date / tags", "\033[10;34marchive\033[0m \033[10;34mrecent\033[0m", "\033[10;34mrecover\033[0m date / tags", "\033[10;34mtag\033[0m [file/\033[10;34mrecent\033[0m [\033[10;34m+\033[0m/\033[10;34m-\033[0m tags]]", "\033[10;34mlist\033[0m [date / tags]", "\033[10;34mprint\033[0m date / tags", "\033[10;34mprint\033[0m \033[10;34mrecent\033[0m", "\033[10;34mmerge\033[0m date / tags" ]
+	end
+	
 	printSpecial("USAGE: \n")
 
 	for i in 0..commands.length-1 do
-		printSpecial(File.basename($0) + " ", "bold")
+		# printSpecial(File.basename($0) + " ", "bold")
+		printSpecial(File.basename($0) + " ")
 		printSpecial(commands[i] + "\n")
 	end
 end
 
 def printSpecial (text, formatting="")
-	case formatting
-		when "bold" then
-			printf "\033[1m%s\033[0m", text
-		when "red" then
-			printf "\033[31m%s\033[0m", text
-		else
-			printf text
+	if NOCOLOR
+		printf text
+	else
+		case formatting
+			when "bold" then
+				printf "\033[1m%s\033[0m", text
+			when "red" then
+				printf "\033[31m%s\033[0m", text
+			else
+				printf text
+		end
 	end
 end
 
@@ -130,15 +152,25 @@ def flattenParams(params, userInput=true)
 end
 
 def formatFilename(filename, color=true)
-	fields = filename.split('*')
+	fields = filename.split(DATE_TAG_DELIM)
 	dateString = fields[0]
-	tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
+	
+	if WINDOWS
+		dateString = dateString.gsub(DATE_FIELD_DELIM, '-')
+	end
+	
+	tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
 	formattedString = dateString + "\t" + tagString.gsub(INTRA_TAG_DELIM.to_s, '-')
 
-	if color == true
-		return "\033[32m" + formattedString + "\033[0m"
-	else
+	if NOCOLOR
 		return formattedString;
+	else
+		# Check if the caller specifically requested coloring
+		if color == true
+			return "\033[32m" + formattedString + "\033[0m"
+		else
+			return formattedString;
+		end
 	end
 end
 
@@ -156,7 +188,7 @@ def new(params=[])
 	tagArray = flattenParams(params)
 	tags = tagArray.join(INTER_TAG_DELIM.to_s)
 	date = DateTime.now
-	filename = HOME_DIR.to_s + "/" + date.year.to_s + ":" + date.month.to_s + ":" + date.day.to_s + "*" + tags
+	filename = HOME_DIR.to_s + "/" + date.year.to_s + DATE_FIELD_DELIM + date.month.to_s + DATE_FIELD_DELIM + date.day.to_s + DATE_TAG_DELIM + tags
 	if editFile(filename) == 0
 		puts "Registered new note"
 	end
@@ -200,9 +232,9 @@ def edit(params=[])
 	userInput = ""
 	Dir.foreach(HOME_DIR) do |entry|
 		if entry != "." && entry != ".." && entry != ".archive"
-			fields = entry.split('*')
+			fields = entry.split(DATE_TAG_DELIM)
 			dateString = fields[0]
-			tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
+			tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
 			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
@@ -244,9 +276,9 @@ def archive(params=[])
 	userInput = ""
 	Dir.foreach(HOME_DIR) do |entry|
 		if entry != "." && entry != ".." && entry != ".archive"
-			fields = entry.split('*')
+			fields = entry.split(DATE_TAG_DELIM)
 			dateString = fields[0]
-			tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
+			tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
 			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
@@ -270,9 +302,9 @@ def recover(params=[])
 	count = 0
 	Dir.foreach(HOME_DIR + "/.archive") do |entry|
 		if entry != "." && entry != ".."
-			fields = entry.split('*')
+			fields = entry.split(DATE_TAG_DELIM)
 			dateString = fields[0]
-			tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
+			tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
 			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
@@ -292,9 +324,9 @@ def recover(params=[])
 end
 
 def tagSingleNote(filename, searchTags)
-	fields = filename.split('*')
+	fields = filename.split(DATE_TAG_DELIM)
 	dateString = fields[0]
-	tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
+	tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
 	tags = tagString.split(INTER_TAG_DELIM.to_s)
 
 	if searchTags.empty?
@@ -318,12 +350,22 @@ def tagSingleNote(filename, searchTags)
 	if operation == "+"
 		# Add tag
 		tags = tags | searchTags
-		printf "Add tag(s) \033[10;32m" + searchTags.join(', ') + "\033[0m for %s? (Y/n) ", formatFilename(filename)
+
+		if NOCOLOR
+			printf "Add tag(s) \'" + searchTags.join('\', \'') + "\' for %s? (Y/n) ", formatFilename(filename)
+		else
+			printf "Add tag(s) \033[10;32m" + searchTags.join(', ') + "\033[0m for %s? (Y/n) ", formatFilename(filename)
+		end
 	else
 		if operation == "-"
 			# Remove tag
 			tags = tags - searchTags
-			printf "Remove tag(s) \033[10;32m" + searchTags.join(', ') + "\033[0m for %s? (Y/n) ", formatFilename(filename)
+
+			if NOCOLOR
+				printf "Remove tag(s) " + searchTags.join(', ') + " for %s? (Y/n) ", formatFilename(filename)
+			else
+				printf "Remove tag(s) \033[10;32m" + searchTags.join(', ') + "\033[0m for %s? (Y/n) ", formatFilename(filename)
+			end			
 		else
 			printErr "Invalid command, expecting '+' or '-' after 'recent'\n"
 			return false
@@ -332,7 +374,7 @@ def tagSingleNote(filename, searchTags)
 
 	userInput = gets.chomp
 	if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-		File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/" + dateString + "*" + tags.join(INTER_TAG_DELIM.to_s))
+		File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/" + dateString + DATE_TAG_DELIM + tags.join(INTER_TAG_DELIM.to_s))
 		return true
 	else
 		return false
@@ -381,9 +423,9 @@ def tag(params=[])
 
 	Dir.foreach(HOME_DIR) do |entry|
 		if entry != "." && entry != ".." && entry != ".archive"
-			fields = entry.split('*')
+			fields = entry.split(DATE_TAG_DELIM)
 			dateString = fields[0]
-			tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
+			tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
 			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
@@ -405,9 +447,9 @@ def list(params=[])
 	fileList = []
 	Dir.foreach(HOME_DIR) do |entry|
 		if entry != "." && entry != ".." && entry != ".archive"
-			fields = entry.split('*')
+			fields = entry.split(DATE_TAG_DELIM)
 			dateString = fields[0]
-			tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
+			tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
 			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
@@ -467,9 +509,9 @@ def print(params=[])
 	count = 0
 	Dir.foreach(HOME_DIR) do |entry|
 		if entry != "." && entry != ".." && entry != ".archive"
-			fields = entry.split('*')
+			fields = entry.split(DATE_TAG_DELIM)
 			dateString = fields[0]
-			tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
+			tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
 			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			tags.push dateString
 
@@ -494,9 +536,9 @@ def merge(params=[])
 	newTags = []
 	Dir.foreach(HOME_DIR) do |entry|
 		if entry != "." && entry != ".." && entry != ".archive"
-			fields = entry.split('*')
+			fields = entry.split(DATE_TAG_DELIM)
 			dateString = fields[0]
-			tagString = fields[1..fields.length()-1].join('*').gsub(INTER_TAG_DELIM.to_s, ', ')
+			tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
 			tags = tagString.split(INTER_TAG_DELIM.to_s)
 			origTags.replace(tags)
 			tags.push dateString
@@ -529,7 +571,7 @@ def merge(params=[])
 		end
 
 		date = DateTime.now
-		filename = HOME_DIR.to_s + "/" + date.year.to_s + ":" + date.month.to_s + ":" + date.day.to_s + "*" + newTags.join(INTER_TAG_DELIM.to_s)
+		filename = HOME_DIR.to_s + "/" + date.year.to_s + DATE_FIELD_DELIM + date.month.to_s + DATE_FIELD_DELIM + date.day.to_s + DATE_TAG_DELIM + newTags.join(INTER_TAG_DELIM.to_s)
 		writeFile(filename, finalString.chomp)
 
 		# Open $editor
