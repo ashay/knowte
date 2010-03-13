@@ -16,19 +16,19 @@ I know you wouldn't be reading this manual before you use. So I did not include 
 
 You can get a full list, along with the syntax by just typing `knowte':
 USAGE: 
-[1mknowte [0m[10;34mnew[0m [tags]
-[1mknowte [0m[10;34medit[0m date / tags
-[1mknowte [0m[10;34medit[0m [10;34mrecent[0m
-[1mknowte [0m[10;34marchive[0m date / tags
-[1mknowte [0m[10;34marchive[0m [10;34mrecent[0m
-[1mknowte [0m[10;34mrecover[0m date / tags
-[1mknowte [0m[10;34mtag[0m [file/[10;34mrecent[0m [[10;34m+[0m/[10;34m-[0m tags]]
-[1mknowte [0m[10;34mlist[0m [date / tags]
-[1mknowte [0m[10;34mprint[0m date / tags
-[1mknowte [0m[10;34mprint[0m [10;34mrecent[0m
-[1mknowte [0m[10;34mmerge[0m date / tags
+knowte new [tags]
+knowte edit date / tags
+knowte edit recent
+knowte archive date / tags
+knowte archive recent
+knowte recover date / tags
+knowte tag [file/recent [+/-  tags]]
+knowte list [date / tags]
+knowte print date / tags
+knowte print recent
+knowte merge date / tags
 
-Commands are shown in blue. The rest of the text indicates the options that you might want to pass to Knowte. Fret not, you need not remember the syntax. You could just type the command and Knowte will prompt you for the required parameters.
+Note that 'recent' is a keyword. The rest of the text indicates the options that you might want to pass to Knowte. Fret not, you need not remember the syntax. You could just type the command and Knowte will prompt you for the required parameters.
 
 Notes are identified by their date of creation and their associated tags. The date and tag parameteres to different commands are used for searching existing notes. Knowte does a partial search, so that you can find notes that were created in a particular month (instead of typing in the full date), etc. When displayed, notes are ordered according to their modification time, so that the most recently modified note appears at the beginning.
 
