@@ -1,5 +1,4 @@
-#!/home/ashayrane/apps/bin/ruby
-#!/home/ashayrane/apps/bin/ruby
+#!/usr/bin/env ruby
 
 # Knowte: A tool to record notes for compiling a research diary
 # Copyright (C) 2010  Ashay Rane
@@ -19,28 +18,14 @@
 
 
 #########################################################################
-# TODO: Add categorization to notes: Allow (1) CrUD operations on groups, (2) Adding notes to / removing notes from a group
-# group create
-# group delete
-# group rename
-# group list
-
-# TODO: Object orientation? Seems to make better sense considering repetition of code
-
-# TODO: Not allow blank tags
-
-# TODO: Remove duplicate tags
-
-# TODO: (FIXME) Needs a revamp of syntax and implementation
-#		Lets keep the underlying tagging mechanism the same (file format) and only change the interface to make it more robust, flexible and intuitive
-
+# TODO: Remove duplicate tags, not allow blank tags in retagging mechanism
 
 require 'date'
 require 'fileutils'
 
 
 ####################################
-# Constant definitions
+# Constants definitions
 ####################################
 
 $editor = ENV['EDITOR']
@@ -54,11 +39,11 @@ HOME_DIR = ENV['HOME'] +"/.rdir"
 INTER_TAG_DELIM = ','
 INTRA_TAG_DELIM = '-'
 
-WINDOWS = true
+WINDOWS = false
 
 if WINDOWS
 	DATE_TAG_DELIM  = '$'
-	DATE_FIELD_DELIM= '%'
+	DATE_FIELD_DELIM= '-'
 	NOCOLOR = true
 else
 	DATE_TAG_DELIM  = '*'
@@ -83,16 +68,15 @@ class Misc
 
 	def Misc.printUsage()
 		if NOCOLOR
-			commands = [ "new [tags]", "edit date / tags", "edit recent", "archive date / tags", "archive recent", "recover date / tags", "tag [file/recent [+/- tags]]", "list [date / tags]", "print date / tags", "print recent", "merge date / tags" ]
+			commands = [ "new [tags]", "edit [date / tags]", "edit recent", "archive [date / tags]", "archive recent", "recover [date / tags]", "tag [file/recent [+/- tags]]", "list [date / tags]", "list recent", "list archive", "print [date / tags]", "print recent", "merge [date / tags]" ]
 		else
-			commands = [ "\033[10;34mnew\033[0m [tags]", "\033[10;34medit\033[0m date / tags", "\033[10;34medit\033[0m \033[10;34mrecent\033[0m", "\033[10;34marchive\033[0m date / tags", "\033[10;34marchive\033[0m \033[10;34mrecent\033[0m", "\033[10;34mrecover\033[0m date / tags", "\033[10;34mtag\033[0m [file/\033[10;34mrecent\033[0m [\033[10;34m+\033[0m/\033[10;34m-\033[0m tags]]", "\033[10;34mlist\033[0m [date / tags]", "\033[10;34mprint\033[0m date / tags", "\033[10;34mprint\033[0m \033[10;34mrecent\033[0m", "\033[10;34mmerge\033[0m date / tags" ]
+			commands = [ "\033[10;34mnew\033[0m [tags]", "\033[10;34medit\033[0m [date / tags]", "\033[10;34medit\033[0m \033[10;34mrecent\033[0m", "\033[10;34marchive\033[0m [date / tags]", "\033[10;34marchive\033[0m \033[10;34mrecent\033[0m", "\033[10;34mrecover\033[0m [date / tags]", "\033[10;34mtag\033[0m [file/\033[10;34mrecent\033[0m [\033[10;34m+\033[0m/\033[10;34m-\033[0m tags]]", "\033[10;34mlist\033[0m [date / tags]", "\033[10;34mlist recent\033[0m", "\033[10;34mlist archive\033[0m", "\033[10;34mprint\033[0m [date / tags]", "\033[10;34mprint\033[0m \033[10;34mrecent\033[0m", "\033[10;34mmerge\033[0m [date / tags]" ]
 		end
 		
 		Formatting.printSpecial("USAGE: \n")
 
 		for i in 0..commands.length-1 do
-			# Formatting.printSpecial(File.basename($0) + " ", "bold")
-			Formatting.printSpecial(File.basename($0) + " ")
+			Formatting.printSpecial(File.basename($0) + " ", "bold")
 			Formatting.printSpecial(commands[i] + "\n")
 		end
 	end
@@ -111,15 +95,14 @@ class Misc
 
 		command = cliArguments.shift
 		case command
-			when "new" then		NoteHandler.newNote(cliArguments)
+			when "new" then	NoteHandler.newNote(cliArguments)
 			when "edit" then	NoteHandler.edit(cliArguments)
 			when "archive" then	NoteHandler.archive(cliArguments)
-			when "tag" then		NoteHandler.tag(cliArguments)		# FIXME: Needs a revamp of syntax and implementation
+			when "tag" then	NoteHandler.tag(cliArguments)		# FIXME: Needs a revamp of syntax and implementation
 			when "list" then	NoteHandler.list(cliArguments)
 			when "print" then	NoteHandler.print(cliArguments)
 			when "merge" then	NoteHandler.merge(cliArguments)
 			when "recover" then	NoteHandler.recover(cliArguments)
-			when "group" then	NoteHandler.group(cliArguments)
 			else NoteHandler.handleUnknownCommand(command)
 		end
 	end
@@ -235,13 +218,13 @@ class FileSystemInterface
 		return fileContents
 	end
 
-	def FileSystemInterface.writeFile(filename)
+	def FileSystemInterface.writeFile(filename, fileContents)
 		newFile = File.open(filename, File::WRONLY|File::TRUNC|File::CREAT)
 		newFile.puts fileContents
 		newFile.close
 	end
 
-	def FileSystemInterface.getRecentFile()
+ 	def FileSystemInterface.getRecentFile()
 		fileList = []
 		# Search for the recently modified file
 		Dir.foreach(HOME_DIR) do |entry|
@@ -258,7 +241,6 @@ class FileSystemInterface
 end
 
 class TagProcessing
-	# FIXME: Might need fixing considering that the underlying tagging semantics might change
 	def TagProcessing.findMatch(tags, searchTags=[])
 		if searchTags.length == 0
 			return true
@@ -274,41 +256,40 @@ class TagProcessing
 
 		return false
 	end
-end
 
-class Group
-	def	create(grpName)
-	end
-	
-	def rename(grpName)
-	end
-	
-	def list
-	end
-	
-	def delete(grpName)
+	def TagProcessing.getTags(noteName="")
+		tags = []
+		if noteName != ""
+			noteParts = noteName.split(DATE_TAG_DELIM)
+			if noteParts [1] != nil
+				tags.replace(noteParts[1].split(INTER_TAG_DELIM))
+			end
+		end
+
+		return tags
 	end
 end
 
 class Note
-	def new(noteName="")
+	def Note.edit(filename="")
+		FileSystemInterface.editFile(filename)
 	end
 	
-	def edit(noteName="")
+	def Note.archive(filename="")
+		File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/.archive/" + filename)
 	end
 	
-	def archive(noteName="")
-	end
-	
-	def recover(noteName="")
+	def Note.recover(filename="")
+		File.rename(HOME_DIR.to_s + "/.archive/" + filename, HOME_DIR.to_s + "/" + filename)
+		FileUtils.touch HOME_DIR.to_s + "/" + filename
 	end
 
-	# FIXME: Needs a revamp of syntax and implementation	
-	def tag(searchTags)
-		fields = filename.split(DATE_TAG_DELIM)
-		dateString = fields[0]
-		tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
-		tags = tagString.split(INTER_TAG_DELIM.to_s)
+	def Note.tagNote(filename="", searchTags=[])
+		tags = TagProcessing.getTags(filename)
+
+		dateString = filename.split(DATE_TAG_DELIM)[0]
+#		tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
+#		tags = tagString.split(INTER_TAG_DELIM.to_s)
 
 		if searchTags.empty?
 			printf "Add(+) / Remove(-) tags (default: +)? "
@@ -321,7 +302,12 @@ class Note
 		end
 
 		if searchTags.empty?
-			printf "Tags to be added or removed: "
+			if operation == "+"
+				printf "Tags to be added: "
+			else
+				printf "Tags to be removed: "
+			end
+
 			searchTags = Formatting.splitQuottedStrings(gets.chomp.strip)
 			if searchTags.empty?
 				return false
@@ -342,6 +328,12 @@ class Note
 				# Remove tag
 				tags = tags - searchTags
 
+				tags.uniq!
+				if tags.length == 0
+					puts "Did not change tags because resulting set of tags was empty."
+					return false
+				end
+
 				if NOCOLOR
 					printf "Remove tag(s) " + searchTags.join(', ') + " for %s? (Y/n) ", Formatting.formatFilename(filename)
 				else
@@ -361,65 +353,79 @@ class Note
 			return false
 		end
 	end
-	
-	def list
+
+	def Note.print(filename="")
+		puts Formatting.formatFilename(filename)
+		puts FileSystemInterface.readFile(HOME_DIR.to_s + "/" + filename)
+		puts
 	end
 	
-	def print(noteName="")
-	end
-	
-	def merge(noteNames=[])
+	def Note.merge(mergeFileList=[], newTags="")
+		if mergeFileList.length > 1
+			puts "\nMerging following notes: "
+			for i in 0..mergeFileList.length-1 do
+				puts Formatting.formatFilename(mergeFileList[i])
+			end
+
+			# Merge them
+			finalString = ""
+			for i in 0..mergeFileList.length-1 do
+				finalString += Formatting.formatFilename(mergeFileList[i], false) + ":\n" + FileSystemInterface.readFile(HOME_DIR.to_s + "/" + mergeFileList[i]) + "\n"
+			end
+
+			date = DateTime.now
+			filename = HOME_DIR.to_s + "/" + date.year.to_s + DATE_FIELD_DELIM + date.month.to_s + DATE_FIELD_DELIM + date.day.to_s + DATE_TAG_DELIM + newTags.join(INTER_TAG_DELIM.to_s)
+			FileSystemInterface.writeFile(filename, finalString.chomp)
+
+			# Open $editor
+			if FileSystemInterface.editFile(filename) == 0
+				# Delete old files
+				for i in 0..mergeFileList.length-1 do
+					if mergeFileList[i] != filename
+						File.rename(HOME_DIR.to_s + "/" + mergeFileList[i], HOME_DIR.to_s + "/.archive/" + mergeFileList[i])
+					end
+				end
+			end
+			
+			puts "Merged notes"
+		else
+			if mergeFileList.length == 1
+				puts "Only one note matched your criteria: " + Formatting.formatFilename(fileList[0])
+			else
+				puts "No notes merged your criteria"
+			end
+		end
 	end
 end
 
 class NoteHandler
 	def NoteHandler.newNote(params=[])
 		tagArray = Formatting.flattenParams(params)
-		tags = tagArray.join(INTER_TAG_DELIM.to_s)
-		date = DateTime.now
-		filename = HOME_DIR.to_s + "/" + date.year.to_s + DATE_FIELD_DELIM + date.month.to_s + DATE_FIELD_DELIM + date.day.to_s + DATE_TAG_DELIM + tags
-		if FileSystemInterface.editFile(filename) == 0
-			puts "Registered new note"
+		if tagArray.length != 0
+			tagArray.uniq!
+			tags = tagArray.join(INTER_TAG_DELIM.to_s)
+			date = DateTime.now
+			filename = HOME_DIR.to_s + "/" + date.year.to_s + DATE_FIELD_DELIM + date.month.to_s + DATE_FIELD_DELIM + date.day.to_s + DATE_TAG_DELIM + tags
+			if FileSystemInterface.editFile(filename) == 0
+				puts "Registered new note"
+			end
+		else
+			puts "Did not register note. At least one tag is required."
 		end
 	end
 	
 	def NoteHandler.edit(params=[])
 		searchTags = Formatting.flattenParams(params)
-
-		if searchTags[0] == "recent"
-			filename = getRecentFile()
-			if filename != ""
-				printf "Edit %s? (Y/n) ", Formatting.formatFilename(filename)
-				userInput = gets.chomp
-				if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-					FileSystemInterface.editFile(HOME_DIR.to_s + "/" + filename)
-					puts "Note edited"
-				end
-			else
-				Formatting.printErr "Could not find any recently edited note\n"
-			end
-
-			return
-		end
+		fileList = NoteHandler.findRelevantNotes(searchTags)
 
 		count = 0
-		userInput = ""
-		Dir.foreach(HOME_DIR) do |entry|
-			if entry != "." && entry != ".." && entry != ".archive"
-				fields = entry.split(DATE_TAG_DELIM)
-				dateString = fields[0]
-				tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
-				tags = tagString.split(INTER_TAG_DELIM.to_s)
-				tags.push dateString
-
-				if (TagProcessing.findMatch(tags, searchTags))
-					printf "Edit %s? (Y/n) ", Formatting.formatFilename(entry)
-					userInput = gets.chomp
-					if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-						FileSystemInterface.editFile(HOME_DIR.to_s + "/" + entry)
-						count = count+1
-					end
-				end
+		for i in 0..fileList.length-1
+			filename = fileList[i]
+			printf "Edit %s? (Y/n) ", Formatting.formatFilename(filename)
+			userInput = gets.chomp
+			if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
+				FileSystemInterface.editFile(HOME_DIR.to_s + "/" + filename)
+				count = count+1
 			end
 		end
 
@@ -428,42 +434,16 @@ class NoteHandler
 
 	def NoteHandler.archive(params=[])
 		searchTags = Formatting.flattenParams(params)
-
-		if searchTags[0] == "recent"
-			filename = getRecentFile()
-			if filename != ""
-				printf "Archive %s? (Y/n) ", Formatting.formatFilename(filename)
-				userInput = gets.chomp
-				if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-					File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/.archive/" + filename)
-					puts "Note archived"
-				else
-					puts "Archive aborted"
-				end
-			else
-				Formatting.printErr "Could not find any recently edited note\n"
-			end
-			return
-		end
+		fileList = NoteHandler.findRelevantNotes(searchTags)
 
 		count = 0
-		userInput = ""
-		Dir.foreach(HOME_DIR) do |entry|
-			if entry != "." && entry != ".." && entry != ".archive"
-				fields = entry.split(DATE_TAG_DELIM)
-				dateString = fields[0]
-				tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
-				tags = tagString.split(INTER_TAG_DELIM.to_s)
-				tags.push dateString
-
-				if (TagProcessing.findMatch(tags, searchTags))
-					printf "Archive %s? (Y/n) ", Formatting.formatFilename(entry)
-					userInput = gets.chomp
-					if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-						File.rename(HOME_DIR.to_s + "/" + entry, HOME_DIR.to_s + "/.archive/" + entry)
-						count = count+1
-					end
-				end
+		for i in 0..fileList.length-1
+			entry = fileList[i]
+			printf "Archive %s? (Y/n) ", Formatting.formatFilename(entry)
+			userInput = gets.chomp
+			if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
+				Note.archive(entry)
+				count = count+1
 			end
 		end
 
@@ -472,25 +452,16 @@ class NoteHandler
 	
 	def NoteHandler.recover(params=[])
 		searchTags = Formatting.flattenParams(params)
+		fileList = NoteHandler.findRelevantNotes(searchTags, true)	# Look into archive folder instead
 
 		count = 0
-		Dir.foreach(HOME_DIR + "/.archive") do |entry|
-			if entry != "." && entry != ".."
-				fields = entry.split(DATE_TAG_DELIM)
-				dateString = fields[0]
-				tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
-				tags = tagString.split(INTER_TAG_DELIM.to_s)
-				tags.push dateString
-
-				if (TagProcessing.findMatch(tags, searchTags))
-					printf "Recover %s? (Y/n) ", Formatting.formatFilename(entry)
-					userInput = gets.chomp
-					if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-						File.rename(HOME_DIR.to_s + "/.archive/" + entry, HOME_DIR.to_s + "/" + entry)
-						FileUtils.touch HOME_DIR.to_s + "/" + entry
-						count = count+1
-					end
-				end
+		for i in 0..fileList.length-1
+			entry = fileList[i]
+			printf "Recover %s? (Y/n) ", Formatting.formatFilename(entry)
+			userInput = gets.chomp
+			if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
+				Note.recover(entry)
+				count = count+1
 			end
 		end
 
@@ -499,9 +470,30 @@ class NoteHandler
 	
 	# FIXME: Needs a revamp of syntax and implementation
 	def NoteHandler.tag(params=[])
-		puts "Needs fixing\n"
-# 		searchTags = Formatting.flattenParams(params, false)
-# 		
+ 		searchTags = Formatting.flattenParams(params, false)
+
+		noteMatchTags = []
+ 		for i in 0..searchTags.length-1
+ 			if searchTags[0] != "+" && searchTags[0] != "-"
+ 				noteMatchTags.push searchTags.shift
+ 			else
+ 				break
+ 			end
+ 		end
+
+		count = 0
+		fileList = NoteHandler.findRelevantNotes(noteMatchTags)
+		for i in 0..fileList.length-1
+			entry = fileList[i]
+			printf "Tag %s? (Y/n) ", Formatting.formatFilename(entry)
+			userInput = gets.chomp
+			if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
+				if Note.tagNote(fileList[i], searchTags) == true
+					count = count+1
+				end
+			end
+		end
+ 
 # 		if searchTags[0] == "recent"
 # 			filename = getRecentFile()
 # 			if filename != ""
@@ -555,15 +547,28 @@ class NoteHandler
 # 			end
 # 		end
 # 
-# 		puts "Changed tags for " + count.to_s + " note(s)"
+ 		puts "Changed tags for " + count.to_s + " note(s)"
 	end
 	
-	def NoteHandler.list(params=[])
-		searchTags = Formatting.flattenParams(params)
+	def NoteHandler.findRelevantNotes(searchTags=[], archiveFolder=false)
+		matchingFiles = Array.new
 
-		count = 0
-		fileList = []
-		Dir.foreach(HOME_DIR) do |entry|
+		searchFolder = HOME_DIR.to_s
+		if archiveFolder == false
+			if searchTags[0] == "recent"
+				filename = FileSystemInterface.getRecentFile()
+				if filename != ""
+					matchingFiles.push(filename)
+				end
+
+				return matchingFiles
+			end
+		else
+			# Searching in the archive folder
+			searchFolder = searchFolder + "/.archive/"
+		end
+
+		Dir.foreach(searchFolder) do |entry|
 			if entry != "." && entry != ".." && entry != ".archive"
 				fields = entry.split(DATE_TAG_DELIM)
 				dateString = fields[0]
@@ -572,132 +577,61 @@ class NoteHandler
 				tags.push dateString
 
 				if (TagProcessing.findMatch(tags, searchTags))
-					mTime = File::mtime(HOME_DIR.to_s + "/" + entry)
-					fileList.push(mTime.strftime("%Y-%m-%d-%H-%M-%S") + "." + entry)
-					# puts Formatting.formatFilename(entry)
-					count = count+1
+					matchingFiles.push(entry)
 				end
 			end
 		end
 
-		fileList.sort!
-		for i in 0..fileList.length-1
-			parts = fileList[fileList.length-1-i].split('.')
-			parts.shift
-			puts Formatting.formatFilename(parts.join('.'))
+		return matchingFiles
+	end
+
+	def NoteHandler.list(params=[])
+		searchTags = Formatting.flattenParams(params)
+
+		if searchTags [0] == "archive"
+			searchTags.shift
+			fileList = NoteHandler.findRelevantNotes(searchTags, true)	# Searching in the archive folder
+		else
+			fileList = NoteHandler.findRelevantNotes(searchTags)
 		end
 
-		puts "Total " + count.to_s + " note(s) displayed"
+		fileList.sort!
+		for i in 0..fileList.length-1
+			puts Formatting.formatFilename(fileList[fileList.length-1-i])
+		end
+
+		puts "Total " + fileList.count.to_s + " note(s) displayed"
 	end
 	
 	def NoteHandler.print(params=[])
 		searchTags = Formatting.flattenParams(params)
 
-		if searchTags[0] == "recent"
-			filename = getRecentFile()
-			if filename != ""
-				puts Formatting.formatFilename(filename)
-				puts readFile(HOME_DIR.to_s + "/" + filename)
-				puts
-			else
-				Formatting.printErr "Could not find any recently edited note\n"
-			end
-
-			return
+		fileList = NoteHandler.findRelevantNotes(searchTags)
+		for i in 0..fileList.length-1
+			Note.print(fileList[i])
 		end
 
-		count = 0
-		Dir.foreach(HOME_DIR) do |entry|
-			if entry != "." && entry != ".." && entry != ".archive"
-				fields = entry.split(DATE_TAG_DELIM)
-				dateString = fields[0]
-				tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
-				tags = tagString.split(INTER_TAG_DELIM.to_s)
-				tags.push dateString
-
-				if (TagProcessing.findMatch(tags, searchTags))
-					puts Formatting.formatFilename(entry)
-					puts readFile(HOME_DIR.to_s + "/" + entry)
-					puts
-					count = count+1
-				end
-			end
-		end
-
-		puts "Total " + count.to_s + " notes(s)"
+		puts "Total " + fileList.length.to_s + " notes(s)"
 	end
 	
 	def NoteHandler.merge(params=[])
 		searchTags = Formatting.flattenParams(params)
 
-		count = 0
-		fileList = []
-		origTags = []
 		newTags = []
-		Dir.foreach(HOME_DIR) do |entry|
-			if entry != "." && entry != ".." && entry != ".archive"
-				fields = entry.split(DATE_TAG_DELIM)
-				dateString = fields[0]
-				tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
-				tags = tagString.split(INTER_TAG_DELIM.to_s)
-				origTags.replace(tags)
-				tags.push dateString
-
-				if (TagProcessing.findMatch(tags, searchTags))
-					printf "Use " + Formatting.formatFilename(entry) + " for merging? (Y/n) "
-					userInput = gets.chomp.strip
-					if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-						newTags = newTags | origTags
-						fileList.push entry
-						count = count+1
-					end
-				end
+		noteTags = []
+		mergeFileList = []
+		fileList = NoteHandler.findRelevantNotes(searchTags)
+		for i in 0..fileList.count-1
+			entry = fileList [i]
+			printf "Use " + Formatting.formatFilename(entry) + " for merging? (Y/n) "
+			userInput = gets.chomp.strip
+			if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
+				newTags = newTags | TagProcessing.getTags(entry)
+				mergeFileList.push entry
 			end
 		end
 
-		if count > 1
-			puts "\nMerging following notes: "
-			for i in 0..fileList.length-1 do
-				puts Formatting.formatFilename(fileList[i])
-			end
-
-			# printf "\nProceed? (Y/n) "
-			# userInput = gets.chomp
-			# if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-			# Merge them
-			finalString = ""
-			for i in 0..fileList.length-1 do
-				finalString += Formatting.formatFilename(fileList[i], false) + ":\n" + readFile(HOME_DIR.to_s + "/" + fileList[i]) + "\n"
-			end
-
-			date = DateTime.now
-			filename = HOME_DIR.to_s + "/" + date.year.to_s + DATE_FIELD_DELIM + date.month.to_s + DATE_FIELD_DELIM + date.day.to_s + DATE_TAG_DELIM + newTags.join(INTER_TAG_DELIM.to_s)
-			writeFile(filename, finalString.chomp)
-
-			# Open $editor
-			if FileSystemInterface.editFile(filename) == 0
-				# Delete old files
-				for i in 0..fileList.length-1 do
-					if fileList[i] != filename
-						File.rename(HOME_DIR.to_s + "/" + fileList[i], HOME_DIR.to_s + "/.archive/" + fileList[i])
-					end
-				end
-			end
-			
-			puts "Merged notes"
-			# else
-			# 	puts "Aborted merging notes"
-			# end
-		else
-			if count == 1
-				puts "Only one note matched your criteria: " + Formatting.formatFilename(fileList[0])
-			else
-				puts "No notes merged your criteria"
-			end
-		end
-	end
-	
-	def NoteHandler.group(params=[])
+		Note.merge(mergeFileList, newTags)
 	end
 	
 	def NoteHandler.handleUnknownCommand(command)
@@ -706,8 +640,6 @@ class NoteHandler
 	end
 end
 
-# FIXME: Needs a revamp of syntax and implementation
-# FIXME: Also needs to go under the TagProcessing class
 def tagSingleNote(filename, searchTags)
 	fields = filename.split(DATE_TAG_DELIM)
 	dateString = fields[0]
