@@ -286,10 +286,7 @@ class Note
 
 	def Note.tagNote(filename="", searchTags=[])
 		tags = TagProcessing.getTags(filename)
-
 		dateString = filename.split(DATE_TAG_DELIM)[0]
-#		tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
-#		tags = tagString.split(INTER_TAG_DELIM.to_s)
 
 		if searchTags.empty?
 			printf "Add(+) / Remove(-) tags (default: +)? "
@@ -494,59 +491,6 @@ class NoteHandler
 			end
 		end
  
-# 		if searchTags[0] == "recent"
-# 			filename = getRecentFile()
-# 			if filename != ""
-# 				if tagSingleFile(filename, searchTags) == true
-# 					puts "Tags changed"
-# 				else
-# 					puts "Aborted changing tags"
-# 				end
-# 			else
-# 				Formatting.printErr "Could not find any recently edited note\n"
-# 			end
-# 
-# 			return
-# 		end
-# 
-# 		count = 0
-# 		userInput = ""
-# 
-# 		noteMatchTags=[]
-# 		if searchTags.empty?
-# 			printf "Tags to identify source note: "
-# 			searchTags = Formatting.splitQuottedStrings(gets.strip.chomp)
-# 		end
-# 
-# 		for i in 0..searchTags.length-1
-# 			if searchTags[0] != "+" && searchTags[0] != "-"
-# 				noteMatchTags.push searchTags.shift
-# 			else
-# 				break
-# 			end
-# 		end
-# 
-# 		# if noteMatchTags.length == searchTags.length
-# 		#	Formatting.printErr "Incorrect syntax, expecting a +/- and at least one tag\n"
-# 		#	return
-# 		# end
-# 
-# 		Dir.foreach(HOME_DIR) do |entry|
-# 			if entry != "." && entry != ".." && entry != ".archive"
-# 				fields = entry.split(DATE_TAG_DELIM)
-# 				dateString = fields[0]
-# 				tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
-# 				tags = tagString.split(INTER_TAG_DELIM.to_s)
-# 				tags.push dateString
-# 
-# 				if (TagProcessing.findMatch(tags, noteMatchTags))
-# 					if tagSingleNote(entry, searchTags) == true
-# 						count = count+1
-# 					end
-# 				end
-# 			end
-# 		end
-# 
  		puts "Changed tags for " + count.to_s + " note(s)"
 	end
 	
