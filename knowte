@@ -39,6 +39,7 @@ HOME_DIR = ENV['HOME'] +"/Dropbox/.rdir"
 INTER_TAG_DELIM = ','
 INTRA_TAG_DELIM = '-'
 DATE_FIELD_DELIM= '-'
+DATE_TAG_DELIM  = '^'
 
 WINDOWS = false
 
@@ -51,8 +52,6 @@ if WINDOWS
 
 		ENDFORMATTING = ""
 	end
-
-	DATE_TAG_DELIM  = '$'
 else
 	class FormattingConstants
 		BLUE = "\033[34m"
@@ -62,8 +61,6 @@ else
 
 		ENDFORMATTING = "\033[0m"
 	end
-
-	DATE_TAG_DELIM  = '*'
 end
 
 
