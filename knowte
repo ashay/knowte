@@ -29,7 +29,7 @@ require 'fileutils'
 ####################################
 
 $editor = ENV['EDITOR']
-DEFAULT_EDITOR = "notepad"
+DEFAULT_EDITOR = "vi"
 
 if $editor.to_s.empty?
 	$editor = DEFAULT_EDITOR.to_s
@@ -268,15 +268,22 @@ class TagProcessing
 			return true
 		end
 
+		# Does ANDing of search terms
 		for i in 0..searchTags.length-1
+			bFound = 0
 			for j in 0..tags.length-1
 				if (".*" + tags[j] + ".*").match(searchTags[i])
-					return true
+					bFound = 1
+					break
 				end
+			end
+
+			if bFound == 0
+				return false
 			end
 		end
 
-		return false
+		return true
 	end
 
 	def TagProcessing.getTags(noteName="")
