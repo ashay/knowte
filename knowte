@@ -41,9 +41,7 @@ INTRA_TAG_DELIM = '-'
 DATE_FIELD_DELIM= '-'
 DATE_TAG_DELIM  = '^'
 
-WINDOWS = false
-
-if WINDOWS
+if RUBY_PLATFORM =~ /mswin32/
 	class FormattingConstants
 		BLUE = ""
 		GREEN = ""
