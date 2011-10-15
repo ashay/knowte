@@ -270,7 +270,7 @@ class TagProcessing
 		for i in 0..searchTags.length-1
 			bFound = 0
 			for j in 0..tags.length-1
-				if (".*" + tags[j] + ".*").match(searchTags[i])
+				if (".*" + tags[j].downcase + ".*").match(searchTags[i].downcase)
 					bFound = 1
 					break
 				end
