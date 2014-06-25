@@ -25,40 +25,40 @@ require 'fileutils'
 
 
 ####################################
-# FormattingConstants definitions
+# FC definitions
 ####################################
 
 $editor = ENV['EDITOR']
 DEFAULT_EDITOR = "vi"
 
 if $editor.to_s.empty?
-	$editor = DEFAULT_EDITOR.to_s
+    $editor = DEFAULT_EDITOR.to_s
 end
 
-HOME_DIR = ENV['HOME'] +"/Dropbox/.rdir"
+HOME_DIR = ENV['HOME'] +"/Google Drive/rdir"
 INTER_TAG_DELIM = ','
 INTRA_TAG_DELIM = '-'
 DATE_FIELD_DELIM= '-'
 DATE_TAG_DELIM  = '^'
 
 if RUBY_PLATFORM =~ /mswin32/
-	class FormattingConstants
-		BLUE = ""
-		GREEN = ""
-		RED = ""
-		BOLD = ""
+    class FC
+        BLUE = ""
+        GREEN = ""
+        RED = ""
+        BOLD = ""
 
-		ENDFORMATTING = ""
-	end
+        ENDF = ""
+    end
 else
-	class FormattingConstants
-		BLUE = "\033[34m"
-		GREEN = "\033[32m"
-		RED = "\033[31m"
-		BOLD = "\033[1m"
+    class FC
+        BLUE = "\033[34m"
+        GREEN = "\033[32m"
+        RED = "\033[31m"
+        BOLD = "\033[1m"
 
-		ENDFORMATTING = "\033[0m"
-	end
+        ENDF = "\033[0m"
+    end
 end
 
 
@@ -67,595 +67,613 @@ end
 ####################################
 
 class Misc
-	def Misc.checkSetup()
-		if !File::exists?(HOME_DIR.to_s)
-			Dir.chdir(File.dirname(HOME_DIR.to_s))
-			Dir.mkdir(File.basename(HOME_DIR.to_s))
-			Dir.chdir(File.basename(HOME_DIR.to_s))
-			Dir.mkdir(".archive")
-		end
-	end
+    def Misc.check_setup()
+        if !File::exists?(HOME_DIR.to_s)
+            Dir.chdir(File.dirname(HOME_DIR.to_s))
+            Dir.mkdir(File.basename(HOME_DIR.to_s))
+            Dir.chdir(File.basename(HOME_DIR.to_s))
+            Dir.mkdir(".archive")
+        end
+    end
 
-	def Misc.printUsage()
-		commands = [ FormattingConstants::BLUE + "new" + FormattingConstants::ENDFORMATTING + " [tags]", FormattingConstants::BLUE + "edit" + FormattingConstants::ENDFORMATTING + " [date / tags]", FormattingConstants::BLUE + "edit" + FormattingConstants::ENDFORMATTING + FormattingConstants::BLUE + " recent" + FormattingConstants::ENDFORMATTING, FormattingConstants::BLUE + "archive" + FormattingConstants::ENDFORMATTING + " [date / tags]", FormattingConstants::BLUE + "archive" + FormattingConstants::ENDFORMATTING + FormattingConstants::BLUE + " recent" + FormattingConstants::ENDFORMATTING, FormattingConstants::BLUE + "recover" + FormattingConstants::ENDFORMATTING + " [date / tags]", FormattingConstants::BLUE + "tag" + FormattingConstants::ENDFORMATTING + " [file/" + FormattingConstants::BLUE + "recent" + FormattingConstants::ENDFORMATTING + " " + FormattingConstants::BLUE + "+" + FormattingConstants::ENDFORMATTING + FormattingConstants::BLUE + "-" + FormattingConstants::ENDFORMATTING + " tags]]", FormattingConstants::BLUE + "list" + FormattingConstants::ENDFORMATTING + " [date / tags]", FormattingConstants::BLUE + "list recent" + FormattingConstants::ENDFORMATTING, FormattingConstants::BLUE + "list archive" + FormattingConstants::ENDFORMATTING, FormattingConstants::BLUE + "print" + FormattingConstants::ENDFORMATTING + " [date / tags]", FormattingConstants::BLUE + "print" + FormattingConstants::ENDFORMATTING + FormattingConstants::BLUE + " recent" + FormattingConstants::ENDFORMATTING, FormattingConstants::BLUE + "merge" + FormattingConstants::ENDFORMATTING + " [date / tags]" ]
-		
-		Formatting.printSpecial("USAGE: \n")
+    def Misc.print_usage()
+        commands = [
+            FC::BLUE + "new" + FC::ENDF + " [tags]",
+            FC::BLUE + "edit" + FC::ENDF + " [date / tags]",
+            FC::BLUE + "edit" + FC::ENDF + FC::BLUE + " recent" + FC::ENDF,
+            FC::BLUE + "archive" + FC::ENDF + " [date / tags]",
+            FC::BLUE + "archive" + FC::ENDF + FC::BLUE + " recent" + FC::ENDF,
+            FC::BLUE + "recover" + FC::ENDF + " [date / tags]",
+            FC::BLUE + "tag" + FC::ENDF + " [file/" + FC::BLUE + "recent" +
+                    FC::ENDF + " " + FC::BLUE + "+" + FC::ENDF + FC::BLUE +
+                    "-" + FC::ENDF + " tags]]",
+            FC::BLUE + "list" + FC::ENDF + " [date / tags]",
+            FC::BLUE + "list recent" + FC::ENDF,
+            FC::BLUE + "list archive" + FC::ENDF,
+            FC::BLUE + "print" + FC::ENDF + " [date / tags]",
+            FC::BLUE + "print" + FC::ENDF + FC::BLUE + " recent" + FC::ENDF,
+            FC::BLUE + "merge" + FC::ENDF + " [date / tags]"
+        ]
+        
+        Formatting.print_special("USAGE: \n")
 
-		for i in 0..commands.length-1 do
-			Formatting.printSpecial(File.basename($0) + " ", "bold")
-			Formatting.printSpecial(commands[i] + "\n")
-		end
-	end
-	
-	def Misc.driver()	# Main routine, I agree it is oddly named
-		cliArguments = []
-		cliArguments.replace(ARGV)
-		ARGV.clear
+        for i in 0..commands.length-1 do
+            Formatting.print_special(File.basename($0) + " ", "bold")
+            Formatting.print_special(commands[i] + "\n")
+        end
+    end
+    
+    def Misc.driver()    # Main routine, I agree it is oddly named
+        cli_arguments = []
+        cli_arguments.replace(ARGV)
+        ARGV.clear
 
-		Misc.checkSetup()
+        Misc.check_setup()
 
-		if cliArguments.length == 0
-			Misc.printUsage()
-			Process.exit
-		end
+        if cli_arguments.length == 0
+            Misc.print_usage()
+            Process.exit
+        end
 
-		command = cliArguments.shift
-		case command
-			when "new" then	NoteHandler.newNote(cliArguments)
-			when "edit" then	NoteHandler.edit(cliArguments)
-			when "archive" then	NoteHandler.archive(cliArguments)
-			when "tag" then	NoteHandler.tag(cliArguments)		# FIXME: Needs a revamp of syntax and implementation
-			when "list" then	NoteHandler.list(cliArguments)
-			when "print" then	NoteHandler.print(cliArguments)
-			when "merge" then	NoteHandler.merge(cliArguments)
-			when "recover" then	NoteHandler.recover(cliArguments)
-			else NoteHandler.handleUnknownCommand(command)
-		end
-	end
+        command = cli_arguments.shift
+        case command
+            when "new" then    NoteHandler.new_note(cli_arguments)
+            when "edit" then    NoteHandler.edit(cli_arguments)
+            when "archive" then    NoteHandler.archive(cli_arguments)
+
+            # FIXME: Needs a revamp of syntax and implementation
+            when "tag" then    NoteHandler.tag(cli_arguments)
+            when "list" then    NoteHandler.list(cli_arguments)
+            when "print" then    NoteHandler.print(cli_arguments)
+            when "merge" then    NoteHandler.merge(cli_arguments)
+            when "recover" then    NoteHandler.recover(cli_arguments)
+            else NoteHandler.handle_unknownCommand(command)
+        end
+    end
 end
 
 class Formatting
-	def Formatting.printSpecial(text, formatting="")
-		case formatting
-			when "bold" then
-				printf FormattingConstants::BOLD + "%s" + FormattingConstants::ENDFORMATTING, text
-			when "red" then
-				printf FormattingConstants::RED + "%s" + FormattingConstants::ENDFORMATTING, text
-			else
-				printf text
-		end
-	end
-	
-	def Formatting.printErr(text)
-		Formatting.printSpecial(text, "red")
-	end
-	
-	def Formatting.splitQuottedStrings(inputString="")
-		finalTags = []
-		userInput = inputString.chomp.strip.gsub('"', '\'')
-		splits = userInput.split('\'')
-		for i in 0..splits.length-1
-			if i % 2 == 1
-				# Odd: Quotted strings
-				newValue = splits[i].gsub(/[ \/]/, INTRA_TAG_DELIM.to_s).chom.strip
-				if newValue.empty? == false
-					finalTags.push newValue
-				end
-			else
-				# Even: Non-quotted strings
-				if splits [i].empty? == false
-					nestedSplits = splits [i].chomp.strip.split(' ')
-					for j in 0..nestedSplits.length-1
-						newValue = nestedSplits[j].gsub(/[ \/]/, INTRA_TAG_DELIM.to_s).chomp.strip
-						if newValue.empty? == false
-							finalTags.push newValue
-						end
-					end
-				end
-			end
-		end
+    def Formatting.print_special(text, formatting = "")
+        case formatting
+            when "bold" then
+                printf FC::BOLD + "%s" + FC::ENDF, text
+            when "red" then
+                printf FC::RED + "%s" + FC::ENDF, text
+            else
+                printf text
+        end
+    end
+    
+    def Formatting.print_err(text)
+        Formatting.print_special(text, "red")
+    end
+    
+    def Formatting.split_quottedStrings(input_string = "")
+        final_tags = []
+        user_input = input_string.chomp.strip.gsub('"', '\'')
+        splits = user_input.split('\'')
+        for i in 0..splits.length-1
+            if i % 2 == 1
+                # Odd: Quotted strings
+                new_value = splits[i].gsub(/[ \/]/, INTRA_TAG_DELIM.to_s).chom.strip
+                if new_value.empty? == false
+                    final_tags.push new_value
+                end
+            else
+                # Even: Non-quotted strings
+                if splits [i].empty? == false
+                    nested_splits = splits [i].chomp.strip.split(' ')
+                    for j in 0..nested_splits.length-1
+                        new_value = nested_splits[j].gsub(/[ \/]/, INTRA_TAG_DELIM.to_s).chomp.strip
+                        if new_value.empty? == false
+                            final_tags.push new_value
+                        end
+                    end
+                end
+            end
+        end
 
-		return finalTags
-	end
-	
-	def Formatting.flattenParams(params, userInput=true)
-		tags = []
-		if params.length == 0
-			if userInput == true
-				printf "Tags: "
-				return Formatting.splitQuottedStrings(gets())
-			end
-		else
-			for i in 0..params.length-1
-				tags[i] = params[i].gsub(/[ \/]/, INTRA_TAG_DELIM.to_s)
-			end
-		end
+        return final_tags
+    end
+    
+    def Formatting.flatten_params(params, user_input = true)
+        tags = []
+        if params.length == 0
+            if user_input == true
+                printf "Tags: "
+                return Formatting.split_quottedStrings(gets())
+            end
+        else
+            for i in 0..params.length-1
+                tags[i] = params[i].gsub(/[ \/]/, INTRA_TAG_DELIM.to_s)
+            end
+        end
 
-		return tags
-	end
-	
-	def Formatting.formatFilename(filename, color=true, archiveSearch=false)
-		fields = filename.split(DATE_TAG_DELIM)
-		dateString = fields[0]
+        return tags
+    end
+    
+    def Formatting.format_filename(filename, color = true, archive_search = false)
+        fields = filename.split(DATE_TAG_DELIM)
+        date_string = fields[0]
 
-		if archiveSearch == false
-			mTime = File::mtime(HOME_DIR.to_s + "/" + filename)
-		else
-			mTime = File::mtime(HOME_DIR.to_s + "/.archive/" + filename)
-		end
+        if archive_search == false
+            m_time = File::mtime(HOME_DIR.to_s + "/" + filename)
+        else
+            m_time = File::mtime(HOME_DIR.to_s + "/.archive/" + filename)
+        end
 
-		strMTime = mTime.strftime("%I:%M %p")
+        str_mTime = m_time.strftime("%I:%M %p")
 
-		tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
-		formattedString = dateString + " (" + strMTime + ")\t\t" + tagString.gsub(INTRA_TAG_DELIM.to_s, '-')
+        tag_string = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
+        formatted_string = date_string + " (" + str_mTime + ")\t\t" + tag_string.gsub(INTRA_TAG_DELIM.to_s, '-')
 
-		if color
-			return FormattingConstants::GREEN + formattedString + FormattingConstants::ENDFORMATTING
-		else
-			return formattedString
-		end
+        if color
+            return FC::GREEN + formatted_string + FC::ENDF
+        else
+            return formatted_string
+        end
 
-	end
+    end
 end
 
 class FileSystemInterface
-	def FileSystemInterface.editFile(filename)
-		FileUtils.touch(filename)
-		if system($editor + " \"" + filename + "\"") == false
-			Formatting.printErr "Could not open editor: " + $editor.to_s + "\n"
-			return 1
-		end
+    def FileSystemInterface.edit_file(filename)
+        FileUtils.touch(filename)
+        if system($editor + " \"" + filename + "\"") == false
+            Formatting.print_err "Could not open editor: " + $editor.to_s + "\n"
+            return 1
+        end
 
-		return 0
-	end
+        return 0
+    end
 
-	def FileSystemInterface.readFile(filename)
-		fileContents = ""
-		file = File.new(filename, "r")
-		while (line = file.gets)
-			fileContents += line
-		end
+    def FileSystemInterface.read_file(filename)
+        file_contents = ""
+        file = File.new(filename, "r")
+        while (line = file.gets)
+            file_contents += line
+        end
 
-		file.close
-		return fileContents
-	end
+        file.close
+        return file_contents
+    end
 
-	def FileSystemInterface.writeFile(filename, fileContents)
-		newFile = File.open(filename, File::WRONLY|File::TRUNC|File::CREAT)
-		newFile.puts fileContents
-		newFile.close
-	end
+    def FileSystemInterface.write_file(filename, file_contents)
+        new_file = File.open(filename, File::WRONLY|File::TRUNC|File::CREAT)
+        new_file.puts file_contents
+        new_file.close
+    end
 
- 	def FileSystemInterface.getRecentFile()
-		fileList = []
-		# Search for the recently modified file
-		Dir.foreach(HOME_DIR) do |entry|
-			if entry != "." && entry != ".." && entry != ".archive"
-				mTime = File::mtime(HOME_DIR.to_s + "/" + entry)
-				fileList.push(mTime.strftime("%Y-%m-%d-%H-%M-%S") + "." + entry)
-			end
-		end
+     def FileSystemInterface.get_recentFile()
+        file_list = []
+        # Search for the recently modified file
+        Dir.foreach(HOME_DIR) do |entry|
+            if entry != "." && entry != ".." && entry != ".archive"
+                m_time = File::mtime(HOME_DIR.to_s + "/" + entry)
+                file_list.push(m_time.strftime("%Y-%m-%d-%H-%M-%S") + "." + entry)
+            end
+        end
 
-		fileList.sort!	# Sort itself
-		fields = fileList.last.split('.')
-		return fields [1..fields.length()-1].join('.')
-	end
+        file_list.sort!    # Sort itself
+        fields = file_list.last.split('.')
+        return fields [1..fields.length()-1].join('.')
+    end
 end
 
 class TagProcessing
-	def TagProcessing.processSpecialTags(searchTags=[])
-		for i in 0..searchTags.length-1
-			case searchTags[i].downcase
-				when "today"
-					date = DateTime.now
-					searchTags.push(date.year.to_s + "-" + date.month.to_s + "-" + date.day.to_s)
+    def TagProcessing.process_specialTags(search_tags = [])
+        for i in 0..search_tags.length-1
+            case search_tags[i].downcase
+                when "today"
+                    date = DateTime.now
+                    search_tags.push(date.year.to_s + "-" + date.month.to_s + "-" + date.day.to_s)
 
-				when "yesterday"
-					date = DateTime.now-1
-					searchTags.push(date.year.to_s + "-" + date.month.to_s + "-" + date.day.to_s)
+                when "yesterday"
+                    date = DateTime.now-1
+                    search_tags.push(date.year.to_s + "-" + date.month.to_s + "-" + date.day.to_s)
 
-				when "yest"
-					date = DateTime.now-1
-					searchTags.push(date.year.to_s + "-" + date.month.to_s + "-" + date.day.to_s)
-			end
-		end
-	end
+                when "yest"
+                    date = DateTime.now-1
+                    search_tags.push(date.year.to_s + "-" + date.month.to_s + "-" + date.day.to_s)
+            end
+        end
+    end
 
-	def TagProcessing.findMatch(tags, searchTags=[])
-		if searchTags.length == 0
-			return true
-		end
+    def TagProcessing.find_match(tags, search_tags = [])
+        if search_tags.length == 0
+            return true
+        end
 
-		# Does ANDing of search terms
-		for i in 0..searchTags.length-1
-			bFound = 0
-			for j in 0..tags.length-1
-				if (".*" + tags[j].downcase + ".*").match(searchTags[i].downcase)
-					bFound = 1
-					break
-				end
-			end
+        # Does ANDing of search terms
+        for i in 0..search_tags.length-1
+            b_found = 0
+            for j in 0..tags.length-1
+                if (".*" + tags[j].downcase + ".*").match(search_tags[i].downcase)
+                    b_found = 1
+                    break
+                end
+            end
 
-			if bFound == 0
-				return false
-			end
-		end
+            if b_found == 0
+                return false
+            end
+        end
 
-		return true
-	end
+        return true
+    end
 
-	def TagProcessing.getTags(noteName="")
-		tags = []
-		if noteName != ""
-			noteParts = noteName.split(DATE_TAG_DELIM)
-			if noteParts [1] != nil
-				tags.replace(noteParts[1].split(INTER_TAG_DELIM))
-			end
-		end
+    def TagProcessing.get_tags(note_name = "")
+        tags = []
+        if note_name != ""
+            note_parts = note_name.split(DATE_TAG_DELIM)
+            if note_parts [1] != nil
+                tags.replace(note_parts[1].split(INTER_TAG_DELIM))
+            end
+        end
 
-		return tags
-	end
+        return tags
+    end
 end
 
 class Note
-	def Note.edit(filename="")
-		FileSystemInterface.editFile(filename)
-	end
-	
-	def Note.archive(filename="")
-		File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/.archive/" + filename)
-	end
-	
-	def Note.recover(filename="")
-		File.rename(HOME_DIR.to_s + "/.archive/" + filename, HOME_DIR.to_s + "/" + filename)
-		FileUtils.touch HOME_DIR.to_s + "/" + filename
-	end
+    def Note.edit(filename = "")
+        FileSystemInterface.edit_file(filename)
+    end
+    
+    def Note.archive(filename = "")
+        File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/.archive/" + filename)
+    end
+    
+    def Note.recover(filename = "")
+        File.rename(HOME_DIR.to_s + "/.archive/" + filename, HOME_DIR.to_s + "/" + filename)
+        FileUtils.touch HOME_DIR.to_s + "/" + filename
+    end
 
-	def Note.tagNote(filename="", searchTags=[])
-		tags = TagProcessing.getTags(filename)
-		dateString = filename.split(DATE_TAG_DELIM)[0]
+    def Note.tag_note(filename = "", search_tags = [])
+        tags = TagProcessing.get_tags(filename)
+        date_string = filename.split(DATE_TAG_DELIM)[0]
 
-		if searchTags.empty?
-			printf "Add(+) / Remove(-) tags (default: +)? "
-			operation = gets.chomp
-			if operation.empty?
-				operation = "+"
-			end
-		else
-			operation = searchTags.shift
-		end
+        if search_tags.empty?
+            printf "Add(+) / Remove(-) tags (default: +)? "
+            operation = gets.chomp
+            if operation.empty?
+                operation = "+"
+            end
+        else
+            operation = search_tags.shift
+        end
 
-		if searchTags.empty?
-			if operation == "+"
-				printf "Tags to be added: "
-			else
-				printf "Tags to be removed: "
-			end
+        if search_tags.empty?
+            if operation == "+"
+                printf "Tags to be added: "
+            else
+                printf "Tags to be removed: "
+            end
 
-			searchTags = Formatting.splitQuottedStrings(gets.chomp.strip)
-			if searchTags.empty?
-				return false
-			end
-		end
+            search_tags = Formatting.split_quottedStrings(gets.chomp.strip)
+            if search_tags.empty?
+                return false
+            end
+        end
 
-		if operation == "+"
-			newTags = (tags | searchTags).uniq
-		else
-			tagFound = false
-			for i in 0..searchTags.length-1
-				if tags.include?(searchTags[i])
-					tagFound = true
-					break
-				end		
-			end
+        if operation == "+"
+            new_tags = (tags | search_tags).uniq
+        else
+            tag_found = false
+            for i in 0..search_tags.length-1
+                if tags.include?(search_tags[i])
+                    tag_found = true
+                    break
+                end        
+            end
 
-			if tagFound == false
-				puts "The tag: \"" + searchTags[i] + "\" was not found to be associated with the note: " + Formatting.formatFilename(filename)+  ". Skipping this note.\n"
-				return false
-			end
+            if tag_found == false
+                puts "The tag: \"" + search_tags[i] + "\" was not found to be associated with the note: " + Formatting.format_filename(filename)+  ". Skipping this note.\n"
+                return false
+            end
 
-			newTags = (tags - searchTags).uniq
-		end
+            new_tags = (tags - search_tags).uniq
+        end
 
-		newFilename = dateString + DATE_TAG_DELIM + newTags.join(INTER_TAG_DELIM.to_s)
-		if newTags.length > 0 and File.exist?(HOME_DIR.to_s + "/" + newFilename)
-			printf "A note with the tag(s) \"%s\" already exists. (Merge/overwrite/q)? ", FormattingConstants::GREEN + tags.join(', ') + FormattingConstants::ENDFORMATTING
-			userInput = gets.chomp
-			if userInput.empty? || userInput.downcase == "merge" || userInput.downcase == "m"
-				Note.merge([filename, newFilename], newTags)
-				return true
-			else
-				if userInput.downcase == "quit" || userInput.downcase == "q"
-					return false
-				else
-					if userInput.downcase == "overwrite" || userInput.downcase = "o"
-						File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/" + dateString + DATE_TAG_DELIM + newTags.join(INTER_TAG_DELIM.to_s))
-						return true
-					end
-				end
-			end
-		end
+        new_filename = date_string + DATE_TAG_DELIM + new_tags.join(INTER_TAG_DELIM.to_s)
+        if new_tags.length > 0 and File.exist?(HOME_DIR.to_s + "/" + new_filename)
+            printf "A note with the tag(s) \"%s\" already exists. (Merge/overwrite/q)? ", FC::GREEN + tags.join(', ') + FC::ENDF
+            user_input = gets.chomp
+            if user_input.empty? || user_input.downcase == "merge" || user_input.downcase == "m"
+                Note.merge([filename, new_filename], new_tags)
+                return true
+            else
+                if user_input.downcase == "quit" || user_input.downcase == "q"
+                    return false
+                else
+                    if user_input.downcase == "overwrite" || user_input.downcase = "o"
+                        File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/" + date_string + DATE_TAG_DELIM + new_tags.join(INTER_TAG_DELIM.to_s))
+                        return true
+                    end
+                end
+            end
+        end
 
-		if operation == "+"
-			printf "Add tag(s) " + FormattingConstants::GREEN + searchTags.join(', ') + FormattingConstants::ENDFORMATTING + " for %s? (Y/n) ", Formatting.formatFilename(filename)
-		else
-			if operation == "-"
-				if newTags.length == 0
-					puts "Did not change tags because resulting set of tags was empty."
-					return
-				end
+        if operation == "+"
+            printf "Add tag(s) " + FC::GREEN + search_tags.join(', ') + FC::ENDF + " for %s? (Y/n) ", Formatting.format_filename(filename)
+        else
+            if operation == "-"
+                if new_tags.length == 0
+                    puts "Did not change tags because resulting set of tags was empty."
+                    return
+                end
 
-				printf "Remove tag(s) " + FormattingConstants::GREEN + searchTags.join(', ') + FormattingConstants::ENDFORMATTING + " for %s? (Y/n) ", Formatting.formatFilename(filename)
-			else
-				Formatting.printErr "Invalid command, expecting '+' or '-' after 'recent'\n"
-				return
-			end
-		end
+                printf "Remove tag(s) " + FC::GREEN + search_tags.join(', ') + FC::ENDF + " for %s? (Y/n) ", Formatting.format_filename(filename)
+            else
+                Formatting.print_err "Invalid command, expecting '+' or '-' after 'recent'\n"
+                return
+            end
+        end
 
-		userInput = gets.chomp
-		if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-			File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/" + dateString + DATE_TAG_DELIM + newTags.join(INTER_TAG_DELIM.to_s))
-			return true
-		else
-			return false
-		end
-	end
+        user_input = gets.chomp
+        if user_input.empty? || user_input.downcase == "yes" || user_input.downcase == "y"
+            File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/" + date_string + DATE_TAG_DELIM + new_tags.join(INTER_TAG_DELIM.to_s))
+            return true
+        else
+            return false
+        end
+    end
 
-	def Note.print(filename="")
-		puts Formatting.formatFilename(filename)
-		puts FileSystemInterface.readFile(HOME_DIR.to_s + "/" + filename)
-		puts
-	end
-	
-	def Note.merge(mergeFileList=[], newTags="")
-		if mergeFileList.length > 1
-			puts "\nMerging following notes: "
-			for i in 0..mergeFileList.length-1 do
-				puts Formatting.formatFilename(mergeFileList[i])
-			end
+    def Note.print(filename = "")
+        puts Formatting.format_filename(filename)
+        puts FileSystemInterface.read_file(HOME_DIR.to_s + "/" + filename)
+        puts
+    end
+    
+    def Note.merge(merge_file_list = [], new_tags = "")
+        if merge_file_list.length > 1
+            puts "\nMerging following notes: "
+            for i in 0..merge_file_list.length-1 do
+                puts Formatting.format_filename(merge_file_list[i])
+            end
 
-			# Merge them
-			finalString = ""
-			for i in 0..mergeFileList.length-1 do
-				finalString += Formatting.formatFilename(mergeFileList[i], false) + ":\n" + FileSystemInterface.readFile(HOME_DIR.to_s + "/" + mergeFileList[i]) + "\n"
-			end
+            # Merge them
+            final_string = ""
+            for i in 0..merge_file_list.length-1 do
+                final_string += Formatting.format_filename(merge_file_list[i], false) + ":\n" + FileSystemInterface.read_file(HOME_DIR.to_s + "/" + merge_file_list[i]) + "\n"
+            end
 
-			date = DateTime.now
-			filename = HOME_DIR.to_s + "/" + date.year.to_s + DATE_FIELD_DELIM + date.month.to_s + DATE_FIELD_DELIM + date.day.to_s + DATE_TAG_DELIM + newTags.join(INTER_TAG_DELIM.to_s)
-			FileSystemInterface.writeFile(filename, finalString.chomp)
+            date = DateTime.now
+            filename = HOME_DIR.to_s + "/" + date.year.to_s + DATE_FIELD_DELIM + date.month.to_s + DATE_FIELD_DELIM + date.day.to_s + DATE_TAG_DELIM + new_tags.join(INTER_TAG_DELIM.to_s)
+            FileSystemInterface.write_file(filename, final_string.chomp)
 
-			# Open $editor
-			if FileSystemInterface.editFile(filename) == 0
-				# Delete old files
-				for i in 0..mergeFileList.length-1 do
-					if mergeFileList[i] != filename
-						FileUtils.mv(HOME_DIR.to_s + "/" + mergeFileList[i], HOME_DIR.to_s + "/.archive/" + mergeFileList[i])
-					end
-				end
-			end
-			
-			puts "Merged notes"
-		else
-			if mergeFileList.length == 1
-				puts "Only one note matched your criteria: " + Formatting.formatFilename(mergeFileList[0]) + ". Cannot merge."
-			else
-				puts "No notes merged your criteria"
-			end
-		end
-	end
+            # Open $editor
+            if FileSystemInterface.edit_file(filename) == 0
+                # Delete old files
+                for i in 0..merge_file_list.length-1 do
+                    if merge_file_list[i] != filename
+                        FileUtils.mv(HOME_DIR.to_s + "/" + merge_file_list[i], HOME_DIR.to_s + "/.archive/" + merge_file_list[i])
+                    end
+                end
+            end
+            
+            puts "Merged notes"
+        else
+            if merge_file_list.length == 1
+                puts "Only one note matched your criteria: " + Formatting.format_filename(merge_file_list[0]) + ". Cannot merge."
+            else
+                puts "No notes merged your criteria"
+            end
+        end
+    end
 end
 
 class NoteHandler
-	def NoteHandler.newNote(params=[])
-		tagArray = Formatting.flattenParams(params)
-		if tagArray.length != 0
-			tagArray.uniq!
-			tags = tagArray.join(INTER_TAG_DELIM.to_s)
-			date = DateTime.now
-			filename = HOME_DIR.to_s + "/" + date.year.to_s + DATE_FIELD_DELIM + date.month.to_s + DATE_FIELD_DELIM + date.day.to_s + DATE_TAG_DELIM + tags
-			if FileSystemInterface.editFile(filename) == 0
-				puts "Registered new note"
-			end
-		else
-			puts "Did not register note. At least one tag is required."
-		end
-	end
-	
-	def NoteHandler.edit(params=[])
-		searchTags = Formatting.flattenParams(params)
-		fileList = NoteHandler.findRelevantNotes(searchTags)
+    def NoteHandler.new_note(params = [])
+        tag_array = Formatting.flatten_params(params)
+        if tag_array.length != 0
+            tag_array.uniq!
+            tags = tag_array.join(INTER_TAG_DELIM.to_s)
+            date = DateTime.now
+            filename = HOME_DIR.to_s + "/" + date.year.to_s + DATE_FIELD_DELIM + date.month.to_s + DATE_FIELD_DELIM + date.day.to_s + DATE_TAG_DELIM + tags
+            if FileSystemInterface.edit_file(filename) == 0
+                puts "Registered new note"
+            end
+        else
+            puts "Did not register note. At least one tag is required."
+        end
+    end
+    
+    def NoteHandler.edit(params = [])
+        search_tags = Formatting.flatten_params(params)
+        file_list = NoteHandler.find_relevantNotes(search_tags)
 
-		count = 0
-		for i in 0..fileList.length-1
-			filename = fileList[i]
-			printf "Edit %s? (Y/n/q) ", Formatting.formatFilename(filename)
-			userInput = gets.chomp
-			if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-				FileSystemInterface.editFile(HOME_DIR.to_s + "/" + filename)
-				count = count+1
-			else
-				if userInput.downcase == "quit" || userInput.downcase == "q"
-					break
-				end
-			end
-		end
+        count = 0
+        for i in 0..file_list.length-1
+            filename = file_list[i]
+            printf "Edit %s? (Y/n/q) ", Formatting.format_filename(filename)
+            user_input = gets.chomp
+            if user_input.empty? || user_input.downcase == "yes" || user_input.downcase == "y"
+                FileSystemInterface.edit_file(HOME_DIR.to_s + "/" + filename)
+                count = count+1
+            else
+                if user_input.downcase == "quit" || user_input.downcase == "q"
+                    break
+                end
+            end
+        end
 
-		puts "Total " + count.to_s + " note(s) edited"
-	end
+        puts "Total " + count.to_s + " note(s) edited"
+    end
 
-	def NoteHandler.archive(params=[])
-		searchTags = Formatting.flattenParams(params)
-		fileList = NoteHandler.findRelevantNotes(searchTags)
+    def NoteHandler.archive(params = [])
+        search_tags = Formatting.flatten_params(params)
+        file_list = NoteHandler.find_relevantNotes(search_tags)
 
-		count = 0
-		for i in 0..fileList.length-1
-			entry = fileList[i]
-			printf "Archive %s? (Y/n/q) ", Formatting.formatFilename(entry)
-			userInput = gets.chomp
-			if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-				Note.archive(entry)
-				count = count+1
-			else
-				if userInput.downcase == "quit" || userInput.downcase == "q"
-					break
-				end
-			end
-		end
+        count = 0
+        for i in 0..file_list.length-1
+            entry = file_list[i]
+            printf "Archive %s? (Y/n/q) ", Formatting.format_filename(entry)
+            user_input = gets.chomp
+            if user_input.empty? || user_input.downcase == "yes" || user_input.downcase == "y"
+                Note.archive(entry)
+                count = count+1
+            else
+                if user_input.downcase == "quit" || user_input.downcase == "q"
+                    break
+                end
+            end
+        end
 
-		puts "Total " + count.to_s + " note(s) archived"
-	end
-	
-	def NoteHandler.recover(params=[])
-		searchTags = Formatting.flattenParams(params)
-		fileList = NoteHandler.findRelevantNotes(searchTags, true)	# Look into archive folder instead
+        puts "Total " + count.to_s + " note(s) archived"
+    end
+    
+    def NoteHandler.recover(params = [])
+        search_tags = Formatting.flatten_params(params)
+        file_list = NoteHandler.find_relevantNotes(search_tags, true)    # Look into archive folder instead
 
-		count = 0
-		for i in 0..fileList.length-1
-			entry = fileList[i]
-			printf "Recover %s? (Y/n/q) ", Formatting.formatFilename(entry, true, true)
-			userInput = gets.chomp
-			if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-				Note.recover(entry)
-				count = count+1
-			else
-				if userInput.downcase == "quit" || userInput.downcase == "q"
-					break
-				end
-			end
-		end
+        count = 0
+        for i in 0..file_list.length-1
+            entry = file_list[i]
+            printf "Recover %s? (Y/n/q) ", Formatting.format_filename(entry, true, true)
+            user_input = gets.chomp
+            if user_input.empty? || user_input.downcase == "yes" || user_input.downcase == "y"
+                Note.recover(entry)
+                count = count+1
+            else
+                if user_input.downcase == "quit" || user_input.downcase == "q"
+                    break
+                end
+            end
+        end
 
-		puts "Total " + count.to_s + " note(s) recovered"
-	end
-	
-	# FIXME: Needs a revamp of syntax and implementation
-	def NoteHandler.tag(params=[])
- 		searchTags = Formatting.flattenParams(params, false)
+        puts "Total " + count.to_s + " note(s) recovered"
+    end
+    
+    # FIXME: Needs a revamp of syntax and implementation
+    def NoteHandler.tag(params = [])
+         search_tags = Formatting.flatten_params(params, false)
 
-		noteMatchTags = []
- 		for i in 0..searchTags.length-1
- 			if searchTags[0] != "+" && searchTags[0] != "-"
- 				noteMatchTags.push searchTags.shift
- 			else
- 				break
- 			end
- 		end
+        note_matchTags = []
+         for i in 0..search_tags.length-1
+             if search_tags[0] != "+" && search_tags[0] != "-"
+                 note_matchTags.push search_tags.shift
+             else
+                 break
+             end
+         end
 
-		count = 0
-		fileList = NoteHandler.findRelevantNotes(noteMatchTags)
-		for i in 0..fileList.length-1
-			entry = fileList[i]
-			printf "Tag %s? (Y/n/q) ", Formatting.formatFilename(entry)
-			userInput = gets.chomp
-			if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-				if Note.tagNote(fileList[i], searchTags) == true
-					count = count+1
-				end
-			else
-				if userInput.downcase == "quit" || userInput.downcase == "q"
-					break
-				end
-			end
-		end
+        count = 0
+        file_list = NoteHandler.find_relevantNotes(note_matchTags)
+        for i in 0..file_list.length-1
+            entry = file_list[i]
+            printf "Tag %s? (Y/n/q) ", Formatting.format_filename(entry)
+            user_input = gets.chomp
+            if user_input.empty? || user_input.downcase == "yes" || user_input.downcase == "y"
+                if Note.tag_note(file_list[i], search_tags) == true
+                    count = count+1
+                end
+            else
+                if user_input.downcase == "quit" || user_input.downcase == "q"
+                    break
+                end
+            end
+        end
  
- 		puts "Changed tags for " + count.to_s + " note(s)"
-	end
-	
-	def NoteHandler.findRelevantNotes(searchTags=[], archiveFolder=false)
-		matchingFiles = Array.new
-		TagProcessing.processSpecialTags(searchTags)
+         puts "Changed tags for " + count.to_s + " note(s)"
+    end
+    
+    def NoteHandler.find_relevantNotes(search_tags = [], archive_folder = false)
+        matching_files = Array.new
+        TagProcessing.process_specialTags(search_tags)
 
-		searchFolder = HOME_DIR.to_s
-		if archiveFolder == false
-			if searchTags[0] == "recent"
-				filename = FileSystemInterface.getRecentFile()
-				if filename != ""
-					matchingFiles.push(filename)
-				end
+        search_folder = HOME_DIR.to_s
+        if archive_folder == false
+            if search_tags[0] == "recent"
+                filename = FileSystemInterface.get_recentFile()
+                if filename != ""
+                    matching_files.push(filename)
+                end
 
-				return matchingFiles
-			end
-		else
-			# Searching in the archive folder
-			searchFolder = searchFolder + "/.archive/"
-		end
+                return matching_files
+            end
+        else
+            # Searching in the archive folder
+            search_folder = search_folder + "/.archive/"
+        end
 
-		Dir.foreach(searchFolder) do |entry|
-			if entry != "." && entry != ".." && entry != ".archive"
-				fields = entry.split(DATE_TAG_DELIM)
-				dateString = fields[0]
-				tagString = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
-				tags = tagString.split(INTER_TAG_DELIM.to_s)
-				tags.push dateString
+        Dir.foreach(search_folder) do |entry|
+            if entry != "." && entry != ".." && entry != ".archive"
+                fields = entry.split(DATE_TAG_DELIM)
+                date_string = fields[0]
+                tag_string = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
+                tags = tag_string.split(INTER_TAG_DELIM.to_s)
+                tags.push date_string
 
-				if (TagProcessing.findMatch(tags, searchTags))
-					matchingFiles.push(entry)
-				end
-			end
-		end
+                if (TagProcessing.find_match(tags, search_tags))
+                    matching_files.push(entry)
+                end
+            end
+        end
 
-		return matchingFiles
-	end
+        return matching_files
+    end
 
-	def NoteHandler.list(params=[])
-		searchTags = Formatting.flattenParams(params)
+    def NoteHandler.list(params = [])
+        search_tags = Formatting.flatten_params(params)
 
-		if searchTags [0] == "archive"
-			searchTags.shift
-			archiveSearch = true
-		else
-			archiveSearch = false
-		end
+        if search_tags [0] == "archive"
+            search_tags.shift
+            archive_search = true
+        else
+            archive_search = false
+        end
 
-		fileList = NoteHandler.findRelevantNotes(searchTags, archiveSearch)
+        file_list = NoteHandler.find_relevantNotes(search_tags, archive_search)
 
-		fileList.sort!
-		for i in 0..fileList.length-1
-			# Showing most recent note first
-			puts Formatting.formatFilename(fileList[fileList.length-1-i], true, archiveSearch)	# Searching in the archive folder
-		end
+        file_list.sort!
+        for i in 0..file_list.length-1
+            # Showing most recent note first
+            puts Formatting.format_filename(file_list[file_list.length-1-i], true, archive_search)    # Searching in the archive folder
+        end
 
-		puts "Total " + fileList.count.to_s + " note(s) displayed"
-	end
-	
-	def NoteHandler.print(params=[])
-		searchTags = Formatting.flattenParams(params)
+        puts "Total " + file_list.count.to_s + " note(s) displayed"
+    end
+    
+    def NoteHandler.print(params = [])
+        search_tags = Formatting.flatten_params(params)
 
-		fileList = NoteHandler.findRelevantNotes(searchTags)
-		for i in 0..fileList.length-1
-			Note.print(fileList[i])
-		end
+        file_list = NoteHandler.find_relevantNotes(search_tags)
+        for i in 0..file_list.length-1
+            Note.print(file_list[i])
+        end
 
-		puts "Total " + fileList.length.to_s + " notes(s)"
-	end
-	
-	def NoteHandler.merge(params=[])
-		searchTags = Formatting.flattenParams(params)
+        puts "Total " + file_list.length.to_s + " notes(s)"
+    end
+    
+    def NoteHandler.merge(params = [])
+        search_tags = Formatting.flatten_params(params)
 
-		newTags = []
-		noteTags = []
-		mergeFileList = []
-		fileList = NoteHandler.findRelevantNotes(searchTags)
-		for i in 0..fileList.count-1
-			entry = fileList [i]
-			printf "Use " + Formatting.formatFilename(entry) + " for merging? (Y/n/q) "
-			userInput = gets.chomp.strip
-			if userInput.empty? || userInput.downcase == "yes" || userInput.downcase == "y"
-				newTags = newTags | TagProcessing.getTags(entry)
-				mergeFileList.push entry
-			else
-				if userInput.downcase == "quit" || userInput.downcase == "q"
-					break
-				end
-			end
-		end
+        new_tags = []
+        note_tags = []
+        merge_file_list = []
+        file_list = NoteHandler.find_relevantNotes(search_tags)
+        for i in 0..file_list.count-1
+            entry = file_list [i]
+            printf "Use " + Formatting.format_filename(entry) + " for merging? (Y/n/q) "
+            user_input = gets.chomp.strip
+            if user_input.empty? || user_input.downcase == "yes" || user_input.downcase == "y"
+                new_tags = new_tags | TagProcessing.get_tags(entry)
+                merge_file_list.push entry
+            else
+                if user_input.downcase == "quit" || user_input.downcase == "q"
+                    break
+                end
+            end
+        end
 
-		Note.merge(mergeFileList, newTags)
-	end
-	
-	def NoteHandler.handleUnknownCommand(command)
-		puts "Unknown command: '" + command + "'"
-		Process.exit
-	end
+        Note.merge(merge_file_list, new_tags)
+    end
+    
+    def NoteHandler.handle_unknownCommand(command)
+        puts "Unknown command: '" + command + "'"
+        Process.exit
+    end
 end
 
 Misc.driver()
