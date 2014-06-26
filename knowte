@@ -84,6 +84,7 @@ class Misc
             FC::BLUE + "print" + " " + FC::BLUE + "recent" + FC::ENDF + " " + FC::GREEN + "|" + FC::ENDF + FC::ENDF + " [date / tags]",
             FC::BLUE + "remove" + " " + FC::BLUE + "recent" + FC::ENDF + " " + FC::GREEN + "|" + FC::ENDF + FC::ENDF + " [date / tags]",
             FC::BLUE + "blob" + " " + FC::BLUE + "clean" + FC::ENDF + " " + FC::GREEN + "|" + FC::ENDF + FC::ENDF + " + <files>",
+            FC::BLUE + "search" + FC::ENDF + " <keywords>",
             FC::BLUE + "tag" + FC::ENDF + " [file/" + FC::BLUE + "recent" + FC::ENDF + " " + FC::BLUE + "+" + FC::ENDF + FC::BLUE + "-" + FC::ENDF + " tags]]",
             FC::BLUE + "merge" + FC::ENDF + " [date / tags]",
         ]
@@ -121,7 +122,8 @@ class Misc
             when "remove"   then    NoteHandler.remove(cli_arguments)
             when "merge"    then    NoteHandler.merge(cli_arguments)
             when "blob"     then    NoteHandler.blob(cli_arguments)
-            else NoteHandler.handle_unknownCommand(command)
+            when "search"   then    NoteHandler.search(cli_arguments)
+            else NoteHandler.handle_unknown_command(command)
         end
     end
 end
@@ -142,7 +144,7 @@ class Formatting
         Formatting.print_special(text, "red")
     end
 
-    def Formatting.split_quottedStrings(input_string = "")
+    def Formatting.split_quotted_strings(input_string = "")
         final_tags = []
         user_input = input_string.chomp.strip.gsub('"', '\'')
         splits = user_input.split('\'')
@@ -175,7 +177,7 @@ class Formatting
         if params.length == 0
             if user_input == true
                 printf "Tags: "
-                return Formatting.split_quottedStrings(gets())
+                return Formatting.split_quotted_strings(gets())
             end
         else
             for i in 0..params.length-1
@@ -191,10 +193,10 @@ class Formatting
         date_string = fields[0]
 
         m_time = File::mtime(HOME_DIR.to_s + "/" + filename)
-        str_mTime = m_time.strftime("%I:%M %p")
+        str_m_time = m_time.strftime("%I:%M %p")
 
         tag_string = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
-        formatted_string = date_string + " (" + str_mTime + ")\t\t" + tag_string.gsub(INTRA_TAG_DELIM.to_s, '-')
+        formatted_string = date_string + " (" + str_m_time + ")\t\t" + tag_string.gsub(INTRA_TAG_DELIM.to_s, '-')
 
         if color
             return FC::GREEN + formatted_string + FC::ENDF
@@ -233,7 +235,7 @@ class FileSystemInterface
         new_file.close
     end
 
-     def FileSystemInterface.get_recentFile()
+     def FileSystemInterface.get_recent_file()
         file_list = []
         # Search for the recently modified file
         Dir.foreach(HOME_DIR) do |entry|
@@ -250,7 +252,7 @@ class FileSystemInterface
 end
 
 class TagProcessing
-    def TagProcessing.process_specialTags(search_tags = [])
+    def TagProcessing.process_special_tags(search_tags = [])
         for i in 0..search_tags.length-1
             case search_tags[i].downcase
                 when "today"
@@ -330,7 +332,7 @@ class Note
                 printf "Tags to be removed: "
             end
 
-            search_tags = Formatting.split_quottedStrings(gets.chomp.strip)
+            search_tags = Formatting.split_quotted_strings(gets.chomp.strip)
             if search_tags.empty?
                 return false
             end
@@ -456,7 +458,7 @@ class NoteHandler
 
     def NoteHandler.edit(params = [])
         search_tags = Formatting.flatten_params(params)
-        file_list = NoteHandler.find_relevantNotes(search_tags)
+        file_list = NoteHandler.find_relevant_notes(search_tags)
 
         count = 0
         for i in 0..file_list.length-1
@@ -480,17 +482,17 @@ class NoteHandler
     def NoteHandler.tag(params = [])
          search_tags = Formatting.flatten_params(params, false)
 
-        note_matchTags = []
+        note_match_tags = []
          for i in 0..search_tags.length-1
              if search_tags[0] != "+" && search_tags[0] != "-"
-                 note_matchTags.push search_tags.shift
+                 note_match_tags.push search_tags.shift
              else
                  break
              end
          end
 
         count = 0
-        file_list = NoteHandler.find_relevantNotes(note_matchTags)
+        file_list = NoteHandler.find_relevant_notes(note_match_tags)
         for i in 0..file_list.length-1
             entry = file_list[i]
             printf "Tag %s? (Y/n/q) ", Formatting.format_filename(entry)
@@ -509,13 +511,13 @@ class NoteHandler
          puts "Changed tags for " + count.to_s + " note(s)"
     end
 
-    def NoteHandler.find_relevantNotes(search_tags = [])
+    def NoteHandler.find_relevant_notes(search_tags = [])
         matching_files = Array.new
-        TagProcessing.process_specialTags(search_tags)
+        TagProcessing.process_special_tags(search_tags)
 
         search_folder = HOME_DIR.to_s
         if search_tags[0] == "recent"
-            filename = FileSystemInterface.get_recentFile()
+            filename = FileSystemInterface.get_recent_file()
             if filename != ""
                 matching_files.push(filename)
             end
@@ -543,7 +545,7 @@ class NoteHandler
 
     def NoteHandler.list(params = [])
         search_tags = Formatting.flatten_params(params)
-        file_list = NoteHandler.find_relevantNotes(search_tags)
+        file_list = NoteHandler.find_relevant_notes(search_tags)
 
         file_list.sort!
         for i in 0..file_list.length-1
@@ -557,7 +559,7 @@ class NoteHandler
     def NoteHandler.print(params = [])
         search_tags = Formatting.flatten_params(params)
 
-        file_list = NoteHandler.find_relevantNotes(search_tags)
+        file_list = NoteHandler.find_relevant_notes(search_tags)
         for i in 0..file_list.length-1
             Note.print(file_list[i])
         end
@@ -567,7 +569,7 @@ class NoteHandler
 
     def NoteHandler.remove(params = [])
         search_tags = Formatting.flatten_params(params)
-        file_list = NoteHandler.find_relevantNotes(search_tags)
+        file_list = NoteHandler.find_relevant_notes(search_tags)
 
         count = 0
         for i in 0..file_list.length-1
@@ -593,7 +595,7 @@ class NoteHandler
         new_tags = []
         note_tags = []
         merge_file_list = []
-        file_list = NoteHandler.find_relevantNotes(search_tags)
+        file_list = NoteHandler.find_relevant_notes(search_tags)
         for i in 0..file_list.count-1
             entry = file_list [i]
             printf "Use " + Formatting.format_filename(entry) + " for merging? (Y/n/q) "
@@ -702,7 +704,31 @@ class NoteHandler
         puts "Total " + count.to_s + " unreferenced blob(s) removed."
     end
 
-    def NoteHandler.handle_unknownCommand(command)
+    def NoteHandler.search(params = [])
+        count = 0
+        Dir.foreach(HOME_DIR) do |entry|
+            if entry != "." and entry != ".." and entry != "blobs"
+                contents = FileSystemInterface.read_file(HOME_DIR.to_s + "/" + entry)
+                found = true
+                for i in 0..params.length - 1 do
+                    param = ".*" + params[i] + ".*"
+                    if contents.match(param) == nil
+                        found = false
+                        break
+                    end
+                end
+
+                if found == true
+                    puts Formatting.format_filename(entry)
+                    count += 1
+                end
+            end
+        end
+
+        puts "Total " + count.to_s + " note(s) matched."
+    end
+
+    def NoteHandler.handle_unknown_command(command)
         puts "Unknown command: '" + command + "'"
         Process.exit
     end
