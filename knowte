@@ -7,12 +7,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -82,11 +82,12 @@ class Misc
             FC::BLUE + "edit" + FC::ENDF + " " + FC::BLUE + "recent" + FC::ENDF + " " + FC::GREEN + "|" + FC::ENDF + " [date / tags]",
             FC::BLUE + "list" + " " + FC::BLUE + "recent" + FC::ENDF + " " + FC::GREEN + "|" + FC::ENDF + FC::ENDF + " [date / tags]",
             FC::BLUE + "print" + " " + FC::BLUE + "recent" + FC::ENDF + " " + FC::GREEN + "|" + FC::ENDF + FC::ENDF + " [date / tags]",
+            FC::BLUE + "remove" + " " + FC::BLUE + "recent" + FC::ENDF + " " + FC::GREEN + "|" + FC::ENDF + FC::ENDF + " [date / tags]",
             FC::BLUE + "blob" + " " + FC::BLUE + "clean" + FC::ENDF + " " + FC::GREEN + "|" + FC::ENDF + FC::ENDF + " + <files>",
             FC::BLUE + "tag" + FC::ENDF + " [file/" + FC::BLUE + "recent" + FC::ENDF + " " + FC::BLUE + "+" + FC::ENDF + FC::BLUE + "-" + FC::ENDF + " tags]]",
             FC::BLUE + "merge" + FC::ENDF + " [date / tags]",
         ]
-        
+
         Formatting.print_special("USAGE: \n")
 
         for i in 0..commands.length-1 do
@@ -94,7 +95,7 @@ class Misc
             Formatting.print_special(commands[i] + "\n")
         end
     end
-    
+
     def Misc.driver()    # Main routine, I agree it is oddly named
         cli_arguments = []
         cli_arguments.replace(ARGV)
@@ -114,8 +115,10 @@ class Misc
 
             # FIXME: Needs a revamp of syntax and implementation
             when "tag"      then    NoteHandler.tag(cli_arguments)
+
             when "list"     then    NoteHandler.list(cli_arguments)
             when "print"    then    NoteHandler.print(cli_arguments)
+            when "remove"   then    NoteHandler.remove(cli_arguments)
             when "merge"    then    NoteHandler.merge(cli_arguments)
             when "blob"     then    NoteHandler.blob(cli_arguments)
             else NoteHandler.handle_unknownCommand(command)
@@ -134,11 +137,11 @@ class Formatting
                 printf text
         end
     end
-    
+
     def Formatting.print_err(text)
         Formatting.print_special(text, "red")
     end
-    
+
     def Formatting.split_quottedStrings(input_string = "")
         final_tags = []
         user_input = input_string.chomp.strip.gsub('"', '\'')
@@ -166,7 +169,7 @@ class Formatting
 
         return final_tags
     end
-    
+
     def Formatting.flatten_params(params, user_input = true)
         tags = []
         if params.length == 0
@@ -182,7 +185,7 @@ class Formatting
 
         return tags
     end
-    
+
     def Formatting.format_filename(filename, color = true)
         fields = filename.split(DATE_TAG_DELIM)
         date_string = fields[0]
@@ -305,7 +308,7 @@ class Note
     def Note.edit(filename = "")
         FileSystemInterface.edit_file(filename)
     end
-    
+
     def Note.tag_note(filename = "", search_tags = [])
         tags = TagProcessing.get_tags(filename)
         date_string = filename.split(DATE_TAG_DELIM)[0]
@@ -341,7 +344,7 @@ class Note
                 if tags.include?(search_tags[i])
                     tag_found = true
                     break
-                end        
+                end
             end
 
             if tag_found == false
@@ -401,7 +404,7 @@ class Note
         puts FileSystemInterface.read_file(HOME_DIR.to_s + "/" + filename)
         puts
     end
-    
+
     def Note.merge(merge_file_list = [], new_tags = "")
         if merge_file_list.length > 1
             puts "\nMerging following notes: "
@@ -423,7 +426,7 @@ class Note
             if FileSystemInterface.edit_file(filename) == 0
                 # FIXME: Delete old files (merge_file_list)
             end
-            
+
             puts "Merged notes"
         else
             if merge_file_list.length == 1
@@ -450,7 +453,7 @@ class NoteHandler
             puts "Did not register note. At least one tag is required."
         end
     end
-    
+
     def NoteHandler.edit(params = [])
         search_tags = Formatting.flatten_params(params)
         file_list = NoteHandler.find_relevantNotes(search_tags)
@@ -502,10 +505,10 @@ class NoteHandler
                 end
             end
         end
- 
+
          puts "Changed tags for " + count.to_s + " note(s)"
     end
-    
+
     def NoteHandler.find_relevantNotes(search_tags = [])
         matching_files = Array.new
         TagProcessing.process_specialTags(search_tags)
@@ -521,7 +524,8 @@ class NoteHandler
         end
 
         Dir.foreach(search_folder) do |entry|
-            if entry != "." && entry != ".."
+            if entry != "." && entry != ".." && entry != "archive" &&
+                    entry != "blobs"
                 fields = entry.split(DATE_TAG_DELIM)
                 date_string = fields[0]
                 tag_string = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
@@ -549,7 +553,7 @@ class NoteHandler
 
         puts "Total " + file_list.count.to_s + " note(s) displayed"
     end
-    
+
     def NoteHandler.print(params = [])
         search_tags = Formatting.flatten_params(params)
 
@@ -560,7 +564,29 @@ class NoteHandler
 
         puts "Total " + file_list.length.to_s + " notes(s)"
     end
-    
+
+    def NoteHandler.remove(params = [])
+        search_tags = Formatting.flatten_params(params)
+        file_list = NoteHandler.find_relevantNotes(search_tags)
+
+        count = 0
+        for i in 0..file_list.length-1
+            filename = file_list[i]
+            printf "Remove %s? (Y/n/q) ", Formatting.format_filename(filename)
+            user_input = gets.chomp
+            if user_input.empty? || user_input.downcase == "yes" || user_input.downcase == "y"
+                FileUtils.remove(HOME_DIR.to_s + "/" + filename)
+                count += 1
+            else
+                if user_input.downcase == "quit" || user_input.downcase == "q"
+                    break
+                end
+            end
+        end
+
+        puts "Total " + count.to_s + " note(s) removed."
+    end
+
     def NoteHandler.merge(params = [])
         search_tags = Formatting.flatten_params(params)
 
@@ -675,7 +701,7 @@ class NoteHandler
 
         puts "Total " + count.to_s + " unreferenced blob(s) removed."
     end
-    
+
     def NoteHandler.handle_unknownCommand(command)
         puts "Unknown command: '" + command + "'"
         Process.exit
