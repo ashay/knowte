@@ -22,7 +22,7 @@
 
 require 'date'
 require 'fileutils'
-
+require 'securerandom'
 
 ####################################
 # FC definitions
@@ -72,7 +72,8 @@ class Misc
             Dir.chdir(File.dirname(HOME_DIR.to_s))
             Dir.mkdir(File.basename(HOME_DIR.to_s))
             Dir.chdir(File.basename(HOME_DIR.to_s))
-            Dir.mkdir(".archive")
+            Dir.mkdir("archive")
+            Dir.mkdir("blobs")
         end
     end
 
@@ -92,7 +93,9 @@ class Misc
             FC::BLUE + "list archive" + FC::ENDF,
             FC::BLUE + "print" + FC::ENDF + " [date / tags]",
             FC::BLUE + "print" + FC::ENDF + FC::BLUE + " recent" + FC::ENDF,
-            FC::BLUE + "merge" + FC::ENDF + " [date / tags]"
+            FC::BLUE + "merge" + FC::ENDF + " [date / tags]",
+            FC::BLUE + "blob" + FC::ENDF + " + <files>",
+            FC::BLUE + "blob" + FC::ENDF + " clean"
         ]
         
         Formatting.print_special("USAGE: \n")
@@ -117,16 +120,17 @@ class Misc
 
         command = cli_arguments.shift
         case command
-            when "new" then    NoteHandler.new_note(cli_arguments)
-            when "edit" then    NoteHandler.edit(cli_arguments)
-            when "archive" then    NoteHandler.archive(cli_arguments)
+            when "new"      then    NoteHandler.new_note(cli_arguments)
+            when "edit"     then    NoteHandler.edit(cli_arguments)
+            when "archive"  then    NoteHandler.archive(cli_arguments)
 
             # FIXME: Needs a revamp of syntax and implementation
-            when "tag" then    NoteHandler.tag(cli_arguments)
-            when "list" then    NoteHandler.list(cli_arguments)
-            when "print" then    NoteHandler.print(cli_arguments)
-            when "merge" then    NoteHandler.merge(cli_arguments)
-            when "recover" then    NoteHandler.recover(cli_arguments)
+            when "tag"      then    NoteHandler.tag(cli_arguments)
+            when "list"     then    NoteHandler.list(cli_arguments)
+            when "print"    then    NoteHandler.print(cli_arguments)
+            when "merge"    then    NoteHandler.merge(cli_arguments)
+            when "recover"  then    NoteHandler.recover(cli_arguments)
+            when "blob"     then    NoteHandler.blob(cli_arguments)
             else NoteHandler.handle_unknownCommand(command)
         end
     end
@@ -199,7 +203,7 @@ class Formatting
         if archive_search == false
             m_time = File::mtime(HOME_DIR.to_s + "/" + filename)
         else
-            m_time = File::mtime(HOME_DIR.to_s + "/.archive/" + filename)
+            m_time = File::mtime(HOME_DIR.to_s + "/archive/" + filename)
         end
 
         str_mTime = m_time.strftime("%I:%M %p")
@@ -248,7 +252,7 @@ class FileSystemInterface
         file_list = []
         # Search for the recently modified file
         Dir.foreach(HOME_DIR) do |entry|
-            if entry != "." && entry != ".." && entry != ".archive"
+            if entry != "." && entry != ".." && entry != "archive"
                 m_time = File::mtime(HOME_DIR.to_s + "/" + entry)
                 file_list.push(m_time.strftime("%Y-%m-%d-%H-%M-%S") + "." + entry)
             end
@@ -321,11 +325,11 @@ class Note
     end
     
     def Note.archive(filename = "")
-        File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/.archive/" + filename)
+        File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/archive/" + filename)
     end
     
     def Note.recover(filename = "")
-        File.rename(HOME_DIR.to_s + "/.archive/" + filename, HOME_DIR.to_s + "/" + filename)
+        File.rename(HOME_DIR.to_s + "/archive/" + filename, HOME_DIR.to_s + "/" + filename)
         FileUtils.touch HOME_DIR.to_s + "/" + filename
     end
 
@@ -447,7 +451,7 @@ class Note
                 # Delete old files
                 for i in 0..merge_file_list.length-1 do
                     if merge_file_list[i] != filename
-                        FileUtils.mv(HOME_DIR.to_s + "/" + merge_file_list[i], HOME_DIR.to_s + "/.archive/" + merge_file_list[i])
+                        FileUtils.mv(HOME_DIR.to_s + "/" + merge_file_list[i], HOME_DIR.to_s + "/archive/" + merge_file_list[i])
                     end
                 end
             end
@@ -594,11 +598,11 @@ class NoteHandler
             end
         else
             # Searching in the archive folder
-            search_folder = search_folder + "/.archive/"
+            search_folder = search_folder + "/archive/"
         end
 
         Dir.foreach(search_folder) do |entry|
-            if entry != "." && entry != ".." && entry != ".archive"
+            if entry != "." && entry != ".." && entry != "archive"
                 fields = entry.split(DATE_TAG_DELIM)
                 date_string = fields[0]
                 tag_string = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
@@ -668,6 +672,98 @@ class NoteHandler
         end
 
         Note.merge(merge_file_list, new_tags)
+    end
+
+    def NoteHandler.blob(params = [])
+        error = false
+        if params.length < 1
+            error = true
+        end
+
+        if params[0] == "+"
+            actual_params = params.last(params.length - 1)
+            self.add_blob(actual_params)
+        elsif params[0] == "clean"
+            actual_params = params.last(params.length - 1)
+            self.clean_blobs(actual_params)
+        else
+            puts FC::RED + "Error" + FC::ENDF + ": Invalid options."
+        end
+    end
+
+    def NoteHandler.add_blob(params)
+        error = false
+        if params.length < 1
+            error = true
+        end
+
+        if error == false
+            # Check whether the file path list is valid.
+            for i in 0..params.length - 1 do
+                file = params[i]
+                if File.exists?(file) == false or File.directory?(file) == true
+                    error = true
+                    break
+                end
+            end
+        end
+
+        if error == true
+            puts FC::RED + "Error" + FC::ENDF +
+                    ": Need a list of valid file paths."
+            return
+        end
+
+        # For each file, generate a GUID and append it to the filename
+        # and copy it over to the .blobs directory.
+        count = 0
+        for i in 0..params.length - 1 do
+            uuid = SecureRandom.uuid
+            abs_path = File.expand_path(params[i])
+            mangled_name = abs_path.gsub('/', '^')
+            filename = uuid + ":" + mangled_name
+
+            # Copy abs_path into "blobs/" + filename.
+            FileUtils.copy_file(abs_path, HOME_DIR.to_s + "/blobs/" + filename)
+            count += 1
+        end
+
+        puts "Added " + count.to_s + " new blob(s)."
+    end
+
+    def NoteHandler.clean_blobs(params)
+        count = 0
+        file_list = []
+
+        # First gather all referenced blobs.
+        Dir.foreach(HOME_DIR) do |entry|
+            if entry != "." && entry != ".." && entry != "archive" &&
+                    entry != "blobs"
+                contents = FileSystemInterface.read_file(HOME_DIR.to_s + "/" + entry)
+                matches = contents.match(/[^(]*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:[^\)]*)[^)]*/)
+                if matches != nil
+                    file_list << matches.to_s
+                end
+            end
+        end
+
+        # Now loop over all blobs and remove them if they are never referenced.
+        Dir.foreach(HOME_DIR + "/blobs") do |entry|
+            if entry != "." and entry != ".." and file_list.include?(entry) == false
+                printf "Remove blob %s? (Y/n/q) ", FC::GREEN + entry + FC::ENDF
+                user_input = gets.chomp
+                if user_input.empty? || user_input.downcase == "yes" || user_input.downcase == "y"
+                    FileUtils.remove(HOME_DIR + "/blobs/" + entry)
+                    count += 1
+                else
+                    if user_input.downcase == "quit" || user_input.downcase == "q"
+                        break
+                    end
+                end
+            end
+        end
+
+        puts "Total " + count.to_s + " unreferenced blob(s) removed."
     end
     
     def NoteHandler.handle_unknownCommand(command)
