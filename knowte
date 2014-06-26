@@ -72,7 +72,6 @@ class Misc
             Dir.chdir(File.dirname(HOME_DIR.to_s))
             Dir.mkdir(File.basename(HOME_DIR.to_s))
             Dir.chdir(File.basename(HOME_DIR.to_s))
-            Dir.mkdir("archive")
             Dir.mkdir("blobs")
         end
     end
@@ -80,28 +79,18 @@ class Misc
     def Misc.print_usage()
         commands = [
             FC::BLUE + "new" + FC::ENDF + " [tags]",
-            FC::BLUE + "edit" + FC::ENDF + " [date / tags]",
-            FC::BLUE + "edit" + FC::ENDF + FC::BLUE + " recent" + FC::ENDF,
-            FC::BLUE + "archive" + FC::ENDF + " [date / tags]",
-            FC::BLUE + "archive" + FC::ENDF + FC::BLUE + " recent" + FC::ENDF,
-            FC::BLUE + "recover" + FC::ENDF + " [date / tags]",
-            FC::BLUE + "tag" + FC::ENDF + " [file/" + FC::BLUE + "recent" +
-                    FC::ENDF + " " + FC::BLUE + "+" + FC::ENDF + FC::BLUE +
-                    "-" + FC::ENDF + " tags]]",
-            FC::BLUE + "list" + FC::ENDF + " [date / tags]",
-            FC::BLUE + "list recent" + FC::ENDF,
-            FC::BLUE + "list archive" + FC::ENDF,
-            FC::BLUE + "print" + FC::ENDF + " [date / tags]",
-            FC::BLUE + "print" + FC::ENDF + FC::BLUE + " recent" + FC::ENDF,
+            FC::BLUE + "edit" + FC::ENDF + " " + FC::BLUE + "recent" + FC::ENDF + " " + FC::GREEN + "|" + FC::ENDF + " [date / tags]",
+            FC::BLUE + "list" + " " + FC::BLUE + "recent" + FC::ENDF + " " + FC::GREEN + "|" + FC::ENDF + FC::ENDF + " [date / tags]",
+            FC::BLUE + "print" + " " + FC::BLUE + "recent" + FC::ENDF + " " + FC::GREEN + "|" + FC::ENDF + FC::ENDF + " [date / tags]",
+            FC::BLUE + "blob" + " " + FC::BLUE + "clean" + FC::ENDF + " " + FC::GREEN + "|" + FC::ENDF + FC::ENDF + " + <files>",
+            FC::BLUE + "tag" + FC::ENDF + " [file/" + FC::BLUE + "recent" + FC::ENDF + " " + FC::BLUE + "+" + FC::ENDF + FC::BLUE + "-" + FC::ENDF + " tags]]",
             FC::BLUE + "merge" + FC::ENDF + " [date / tags]",
-            FC::BLUE + "blob" + FC::ENDF + " + <files>",
-            FC::BLUE + "blob" + FC::ENDF + " clean"
         ]
         
         Formatting.print_special("USAGE: \n")
 
         for i in 0..commands.length-1 do
-            Formatting.print_special(File.basename($0) + " ", "bold")
+            Formatting.print_special(FC::GREEN + File.basename($0) + FC::ENDF + " ", "bold")
             Formatting.print_special(commands[i] + "\n")
         end
     end
@@ -122,14 +111,12 @@ class Misc
         case command
             when "new"      then    NoteHandler.new_note(cli_arguments)
             when "edit"     then    NoteHandler.edit(cli_arguments)
-            when "archive"  then    NoteHandler.archive(cli_arguments)
 
             # FIXME: Needs a revamp of syntax and implementation
             when "tag"      then    NoteHandler.tag(cli_arguments)
             when "list"     then    NoteHandler.list(cli_arguments)
             when "print"    then    NoteHandler.print(cli_arguments)
             when "merge"    then    NoteHandler.merge(cli_arguments)
-            when "recover"  then    NoteHandler.recover(cli_arguments)
             when "blob"     then    NoteHandler.blob(cli_arguments)
             else NoteHandler.handle_unknownCommand(command)
         end
@@ -196,16 +183,11 @@ class Formatting
         return tags
     end
     
-    def Formatting.format_filename(filename, color = true, archive_search = false)
+    def Formatting.format_filename(filename, color = true)
         fields = filename.split(DATE_TAG_DELIM)
         date_string = fields[0]
 
-        if archive_search == false
-            m_time = File::mtime(HOME_DIR.to_s + "/" + filename)
-        else
-            m_time = File::mtime(HOME_DIR.to_s + "/archive/" + filename)
-        end
-
+        m_time = File::mtime(HOME_DIR.to_s + "/" + filename)
         str_mTime = m_time.strftime("%I:%M %p")
 
         tag_string = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
@@ -252,7 +234,7 @@ class FileSystemInterface
         file_list = []
         # Search for the recently modified file
         Dir.foreach(HOME_DIR) do |entry|
-            if entry != "." && entry != ".." && entry != "archive"
+            if entry != "." && entry != ".."
                 m_time = File::mtime(HOME_DIR.to_s + "/" + entry)
                 file_list.push(m_time.strftime("%Y-%m-%d-%H-%M-%S") + "." + entry)
             end
@@ -324,15 +306,6 @@ class Note
         FileSystemInterface.edit_file(filename)
     end
     
-    def Note.archive(filename = "")
-        File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/archive/" + filename)
-    end
-    
-    def Note.recover(filename = "")
-        File.rename(HOME_DIR.to_s + "/archive/" + filename, HOME_DIR.to_s + "/" + filename)
-        FileUtils.touch HOME_DIR.to_s + "/" + filename
-    end
-
     def Note.tag_note(filename = "", search_tags = [])
         tags = TagProcessing.get_tags(filename)
         date_string = filename.split(DATE_TAG_DELIM)[0]
@@ -448,12 +421,7 @@ class Note
 
             # Open $editor
             if FileSystemInterface.edit_file(filename) == 0
-                # Delete old files
-                for i in 0..merge_file_list.length-1 do
-                    if merge_file_list[i] != filename
-                        FileUtils.mv(HOME_DIR.to_s + "/" + merge_file_list[i], HOME_DIR.to_s + "/archive/" + merge_file_list[i])
-                    end
-                end
+                # FIXME: Delete old files (merge_file_list)
             end
             
             puts "Merged notes"
@@ -505,50 +473,6 @@ class NoteHandler
         puts "Total " + count.to_s + " note(s) edited"
     end
 
-    def NoteHandler.archive(params = [])
-        search_tags = Formatting.flatten_params(params)
-        file_list = NoteHandler.find_relevantNotes(search_tags)
-
-        count = 0
-        for i in 0..file_list.length-1
-            entry = file_list[i]
-            printf "Archive %s? (Y/n/q) ", Formatting.format_filename(entry)
-            user_input = gets.chomp
-            if user_input.empty? || user_input.downcase == "yes" || user_input.downcase == "y"
-                Note.archive(entry)
-                count = count+1
-            else
-                if user_input.downcase == "quit" || user_input.downcase == "q"
-                    break
-                end
-            end
-        end
-
-        puts "Total " + count.to_s + " note(s) archived"
-    end
-    
-    def NoteHandler.recover(params = [])
-        search_tags = Formatting.flatten_params(params)
-        file_list = NoteHandler.find_relevantNotes(search_tags, true)    # Look into archive folder instead
-
-        count = 0
-        for i in 0..file_list.length-1
-            entry = file_list[i]
-            printf "Recover %s? (Y/n/q) ", Formatting.format_filename(entry, true, true)
-            user_input = gets.chomp
-            if user_input.empty? || user_input.downcase == "yes" || user_input.downcase == "y"
-                Note.recover(entry)
-                count = count+1
-            else
-                if user_input.downcase == "quit" || user_input.downcase == "q"
-                    break
-                end
-            end
-        end
-
-        puts "Total " + count.to_s + " note(s) recovered"
-    end
-    
     # FIXME: Needs a revamp of syntax and implementation
     def NoteHandler.tag(params = [])
          search_tags = Formatting.flatten_params(params, false)
@@ -582,27 +506,22 @@ class NoteHandler
          puts "Changed tags for " + count.to_s + " note(s)"
     end
     
-    def NoteHandler.find_relevantNotes(search_tags = [], archive_folder = false)
+    def NoteHandler.find_relevantNotes(search_tags = [])
         matching_files = Array.new
         TagProcessing.process_specialTags(search_tags)
 
         search_folder = HOME_DIR.to_s
-        if archive_folder == false
-            if search_tags[0] == "recent"
-                filename = FileSystemInterface.get_recentFile()
-                if filename != ""
-                    matching_files.push(filename)
-                end
-
-                return matching_files
+        if search_tags[0] == "recent"
+            filename = FileSystemInterface.get_recentFile()
+            if filename != ""
+                matching_files.push(filename)
             end
-        else
-            # Searching in the archive folder
-            search_folder = search_folder + "/archive/"
+
+            return matching_files
         end
 
         Dir.foreach(search_folder) do |entry|
-            if entry != "." && entry != ".." && entry != "archive"
+            if entry != "." && entry != ".."
                 fields = entry.split(DATE_TAG_DELIM)
                 date_string = fields[0]
                 tag_string = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
@@ -620,20 +539,12 @@ class NoteHandler
 
     def NoteHandler.list(params = [])
         search_tags = Formatting.flatten_params(params)
-
-        if search_tags [0] == "archive"
-            search_tags.shift
-            archive_search = true
-        else
-            archive_search = false
-        end
-
-        file_list = NoteHandler.find_relevantNotes(search_tags, archive_search)
+        file_list = NoteHandler.find_relevantNotes(search_tags)
 
         file_list.sort!
         for i in 0..file_list.length-1
             # Showing most recent note first
-            puts Formatting.format_filename(file_list[file_list.length-1-i], true, archive_search)    # Searching in the archive folder
+            puts Formatting.format_filename(file_list[file_list.length-1-i], true)
         end
 
         puts "Total " + file_list.count.to_s + " note(s) displayed"
@@ -737,8 +648,7 @@ class NoteHandler
 
         # First gather all referenced blobs.
         Dir.foreach(HOME_DIR) do |entry|
-            if entry != "." && entry != ".." && entry != "archive" &&
-                    entry != "blobs"
+            if entry != "." && entry != ".." && entry != "blobs"
                 contents = FileSystemInterface.read_file(HOME_DIR.to_s + "/" + entry)
                 matches = contents.match(/[^(]*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:[^\)]*)[^)]*/)
                 if matches != nil
