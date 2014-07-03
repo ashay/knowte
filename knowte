@@ -193,10 +193,10 @@ class Formatting
         date_string = fields[0]
 
         m_time = File::mtime(HOME_DIR.to_s + "/" + filename)
-        str_m_time = m_time.strftime("%I:%M %p")
+        str_m_time = m_time.strftime("%Y-%m-%d (%I:%M %p)")
 
         tag_string = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
-        formatted_string = date_string + " (" + str_m_time + ")\t\t" + tag_string.gsub(INTRA_TAG_DELIM.to_s, '-')
+        formatted_string = str_m_time + "\t\t" + tag_string.gsub(INTRA_TAG_DELIM.to_s, '-')
 
         if color
             return FC::GREEN + formatted_string + FC::ENDF
@@ -209,7 +209,6 @@ end
 
 class FileSystemInterface
     def FileSystemInterface.edit_file(filename)
-        FileUtils.touch(filename)
         if system($editor + " \"" + filename + "\"") == false
             Formatting.print_err "Could not open editor: " + $editor.to_s + "\n"
             return 1
