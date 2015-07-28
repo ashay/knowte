@@ -219,7 +219,7 @@ class FileSystemInterface
 
     def FileSystemInterface.read_file(filename)
         file_contents = ""
-        file = File.new(filename, "r")
+        file = File.open(filename, "r:ASCII-8BIT")
         while (line = file.gets)
             file_contents += line
         end
@@ -710,7 +710,7 @@ class NoteHandler
                 contents = FileSystemInterface.read_file(HOME_DIR.to_s + "/" + entry)
                 found = true
                 for i in 0..params.length - 1 do
-                    param = ".*" + params[i] + ".*"
+                    param = '(.*)' + params[i] + '(.*)'
                     if contents.match(param) == nil
                         found = false
                         break
