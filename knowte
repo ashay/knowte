@@ -195,7 +195,7 @@ class Formatting
         m_time = File::mtime(HOME_DIR.to_s + "/" + filename)
         str_m_time = m_time.strftime("%Y-%m-%d (%I:%M %p)")
 
-        tag_string = fields[1..fields.length()-1].join(DATE_TAG_DELIM).gsub(INTER_TAG_DELIM.to_s, ', ')
+        tag_string = fields[1].split(INTER_TAG_DELIM).sort.join(', ')
         formatted_string = str_m_time + "\t\t" + tag_string.gsub(INTRA_TAG_DELIM.to_s, '-')
 
         if color
