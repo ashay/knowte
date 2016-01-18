@@ -318,47 +318,48 @@ class Note
     def Note.tag_note(filename = "", search_tags = [])
         tags = TagProcessing.get_tags(filename)
         date_string = filename.split(DATE_TAG_DELIM)[0]
+        _search_tags = search_tags.map do |e| e.dup end
 
-        if search_tags.empty?
+        if _search_tags.empty?
             printf "Add(+) / Remove(-) tags (default: +)? "
             operation = gets.chomp
             if operation.empty?
                 operation = "+"
             end
         else
-            operation = search_tags.shift
+            operation = _search_tags.shift
         end
 
-        if search_tags.empty?
+        if _search_tags.empty?
             if operation == "+"
                 printf "Tags to be added: "
             else
                 printf "Tags to be removed: "
             end
 
-            search_tags = Formatting.split_quotted_strings(gets.chomp.strip)
-            if search_tags.empty?
+            _search_tags = Formatting.split_quotted_strings(gets.chomp.strip)
+            if _search_tags.empty?
                 return false
             end
         end
 
         if operation == "+"
-            new_tags = (tags | search_tags).uniq
+            new_tags = (tags | _search_tags).uniq
         else
             tag_found = false
-            for i in 0..search_tags.length-1
-                if tags.include?(search_tags[i])
+            for i in 0.._search_tags.length-1
+                if tags.include?(_search_tags[i])
                     tag_found = true
                     break
                 end
             end
 
             if tag_found == false
-                puts "The tag: \"" + search_tags[i] + "\" was not found to be associated with the note: " + Formatting.format_filename(filename)+  ". Skipping this note.\n"
+                puts "The tag: \"" + _search_tags[i] + "\" was not found to be associated with the note: " + Formatting.format_filename(filename)+  ". Skipping this note.\n"
                 return false
             end
 
-            new_tags = (tags - search_tags).uniq
+            new_tags = (tags - _search_tags).uniq
         end
 
         new_filename = date_string + DATE_TAG_DELIM + new_tags.join(INTER_TAG_DELIM.to_s)
@@ -372,7 +373,7 @@ class Note
                 if user_input.downcase == "quit" || user_input.downcase == "q"
                     return false
                 else
-                    if user_input.downcase == "overwrite" || user_input.downcase = "o"
+                    if user_input.downcase == "overwrite" || user_input.downcase == "o"
                         File.rename(HOME_DIR.to_s + "/" + filename, HOME_DIR.to_s + "/" + date_string + DATE_TAG_DELIM + new_tags.join(INTER_TAG_DELIM.to_s))
                         return true
                     end
@@ -381,7 +382,7 @@ class Note
         end
 
         if operation == "+"
-            printf "Add tag(s) " + FC::GREEN + search_tags.join(', ') + FC::ENDF + " for %s? (Y/n) ", Formatting.format_filename(filename)
+            printf "Add tag(s) " + FC::GREEN + _search_tags.join(', ') + FC::ENDF + " for %s? (Y/n) ", Formatting.format_filename(filename)
         else
             if operation == "-"
                 if new_tags.length == 0
@@ -389,7 +390,7 @@ class Note
                     return
                 end
 
-                printf "Remove tag(s) " + FC::GREEN + search_tags.join(', ') + FC::ENDF + " for %s? (Y/n) ", Formatting.format_filename(filename)
+                printf "Remove tag(s) " + FC::GREEN + _search_tags.join(', ') + FC::ENDF + " for %s? (Y/n) ", Formatting.format_filename(filename)
             else
                 Formatting.print_err "Invalid command, expecting '+' or '-' after 'recent'\n"
                 return
